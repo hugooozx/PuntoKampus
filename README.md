@@ -8,14 +8,14 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **P
 
 Esta entrega inicia la aplicación Flutter con datos ficticios y recorridos locales de demostración, junto con la base de la API de Vitrina. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
 
-La aplicación y la API avanzan por separado en este primer incremento. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). No se asume una base PostgreSQL disponible ni un repositorio remoto conectado.
+La app guarda los cambios de demostración en el navegador o dispositivo. La API ya expone las rutas públicas de Vitrina. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). La conexión de Flutter a la API, el acceso institucional y el panel Filament quedan para los siguientes incrementos.
 
 ## Carpetas
 
 | Ruta | Contenido |
 | --- | --- |
 | `app/` | Aplicación Flutter para Android y web |
-| `api/` | API Laravel y administración Filament |
+| `api/` | API de Vitrina en Laravel, preparada para PostgreSQL |
 | `docs/prd/` | Los nueve archivos originales del PRD, copiados sin modificaciones |
 | `docs/contexto/` | Contexto original del proyecto |
 | `docs/decisiones.md` | Decisiones vigentes y elementos provisionales |
@@ -24,7 +24,9 @@ La aplicación y la API avanzan por separado en este primer incremento. El contr
 
 ## Ejecutar Flutter
 
-Se necesita un SDK de Flutter estable compatible con `app/pubspec.yaml`. Para Android también se requiere Android SDK, un emulador o un dispositivo; para empezar a revisar el diseño se puede usar la versión web.
+En la computadora donde ya está compilada la demo, abre `Abrir PuntoKampus.cmd`. Se necesita Python 3 y la ventana del servidor debe quedar abierta mientras pruebas.
+
+Para compilar desde el código se necesita Flutter 3.50 o posterior. Para Android también se requiere Android SDK y un emulador o un dispositivo.
 
 Desde la raíz:
 
@@ -37,7 +39,9 @@ flutter run -d chrome
 Para producir los archivos web:
 
 ```powershell
-flutter build web
+flutter build web --no-web-resources-cdn
+cd ..
+python scripts/abrir_demo.py
 ```
 
 Para validar el código:
@@ -47,11 +51,13 @@ flutter analyze
 flutter test
 ```
 
-La instalación de herramientas y los resultados efectivos de validación se registran al cerrar cada tarea; estos comandos no significan que todos los entornos estén configurados.
+En la instalación portátil de esta computadora, usa `../.tools/flutter/bin/flutter.bat` en lugar de `flutter` cuando estés dentro de `app/`.
+
+Para probar el recorrido, abre Vitrina, elige Productos y agrega un brownie. Completa la entrega y revisa el pedido pendiente en Mis pedidos. Desde Cuenta puedes cambiar a Ana Pérez para atender el pedido de Dulces de Ana o a Mateo Ruiz para probar la creación de tienda.
 
 ## Ejecutar la API
 
-La configuración, instalación, migraciones, datos de demostración y pruebas se describen en [api/README.md](api/README.md). PostgreSQL es la base acordada para el despliegue. Los datos ficticios son exclusivos de desarrollo y no deben cargarse en producción.
+La configuración, migraciones, catálogos iniciales y pruebas se describen en [api/README.md](api/README.md). PostgreSQL es la base acordada para el despliegue. La suite de Laravel utiliza SQLite en memoria.
 
 Los archivos `.env` son locales. Cada desarrollador crea el suyo a partir del ejemplo y configura sus propios servicios. Nunca se comparten credenciales, claves privadas ni comprobantes reales mediante Git.
 
@@ -64,7 +70,7 @@ Los archivos `.env` son locales. Cada desarrollador crea el suyo a partir del ej
 5. Abrir un PR con qué cambió, cómo probarlo y de qué depende.
 6. La otra persona revisa antes de integrar en `main`.
 
-Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo y las reglas del contrato. **El remoto de GitHub está pendiente de definir**; no se ha supuesto una URL ni publicado el proyecto.
+Consulta [CONTRIBUTING.md](CONTRIBUTING.md) para el flujo y las reglas del contrato. El remoto del proyecto es [hugooozx/PuntoKampus](https://github.com/hugooozx/PuntoKampus).
 
 ## Fuente de requisitos
 
