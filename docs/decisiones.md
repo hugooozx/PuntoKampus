@@ -40,3 +40,11 @@ Registro inicial: 13 de noviembre de 2026. Esta nota distingue las decisiones po
 - El modelo separa facultades, carreras y perfiles de vendedores; usa una tabla de asociación para las categorías; calcula totales y vigencia Premium sin duplicarlos en las tablas.
 - Las diferencias con `04-datos-reglas-y-api.md`, la propuesta de campos/rutas académicos y el impacto en Flutter y Laravel se documentan en `database/mysql/README.md`. El PRD original permanece intacto como referencia.
 - Esta entrega es el diseño de datos y su validación en MySQL, no la integración de la API con el nuevo esquema. Las migraciones iniciales no se deben ejecutar sobre este esquema hasta conciliarlas.
+
+## Aprobación e integración de MySQL v1
+
+- El 14 de noviembre el usuario aprobó la base y autorizó integrar Laravel.
+- La migración nueva crea el esquema o adopta el SQL aprobado verificando definiciones. Las migraciones de la demo se archivaron fuera del ejecutor.
+- La API pública de Vitrina ya consulta MySQL. Los cambios de representación y sus efectos para Flutter se detallan en `docs/integracion-mysql-v1.md`.
+- Desarrollo permanece sin contenido; las pruebas usan una base independiente. No se agregan catálogos ni tiendas automáticamente.
+- La conexión de Flutter, fidelidad visual a las láminas y funcionalidades autenticadas siguen siendo trabajo pendiente.

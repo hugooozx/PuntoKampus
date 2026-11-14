@@ -13,7 +13,9 @@ class Producto extends Model
 
     const DELETED_AT = 'eliminado_en';
 
-    public $timestamps = false;
+    const CREATED_AT = 'creado_en';
+
+    const UPDATED_AT = 'actualizado_en';
 
     protected $fillable = ['tienda_id', 'nombre', 'descripcion', 'precio', 'disponible'];
 

@@ -5,22 +5,28 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tienda extends Model
 {
-    public $timestamps = false;
+    const CREATED_AT = 'creado_en';
 
-    protected $fillable = ['usuario_id', 'nombre', 'slug', 'descripcion', 'logo_url', 'portada_url', 'categoria_1_id', 'categoria_2_id', 'horario', 'punto_entrega_id'];
+    const UPDATED_AT = 'actualizado_en';
+
+    protected $fillable = ['usuario_id', 'nombre', 'slug', 'descripcion', 'logo_url', 'portada_url', 'horario', 'punto_entrega_id'];
+
+    protected $with = ['categorias', 'vigencia', 'perfilVendedor'];
 
     protected function casts(): array
     {
-        return ['premium_hasta' => 'date', 'dada_de_baja_en' => 'datetime'];
+        return ['dada_de_baja_en' => 'datetime'];
     }
 
     public function scopeActivas(Builder $query): void
     {
-        $query->where('estado', 'activa');
+        $query->where('tiendas.estado', 'activa');
     }
 
     public function productos(): HasMany
@@ -33,14 +39,19 @@ class Tienda extends Model
         return $this->belongsTo(Usuario::class);
     }
 
-    public function categoria1(): BelongsTo
+    public function perfilVendedor(): BelongsTo
     {
-        return $this->belongsTo(Categoria::class, 'categoria_1_id');
+        return $this->belongsTo(PerfilVendedor::class, 'usuario_id', 'usuario_id');
     }
 
-    public function categoria2(): BelongsTo
+    public function categorias(): BelongsToMany
     {
-        return $this->belongsTo(Categoria::class, 'categoria_2_id');
+        return $this->belongsToMany(Categoria::class, 'tiendas_categorias')->withPivot('orden')->orderByPivot('orden');
+    }
+
+    public function vigencia(): HasOne
+    {
+        return $this->hasOne(VigenciaTienda::class, 'tienda_id');
     }
 
     public function puntoEntrega(): BelongsTo
@@ -48,8 +59,13 @@ class Tienda extends Model
         return $this->belongsTo(PuntoEntrega::class);
     }
 
+    public function categoriaId(int $orden): ?int
+    {
+        return $this->categorias->first(fn ($categoria) => (int) $categoria->pivot->orden === $orden)?->id;
+    }
+
     public function tienePremium(): bool
     {
-        return $this->plan === 'premium' && $this->premium_hasta?->endOfDay()->isFuture();
+        return $this->vigencia?->plan === 'premium';
     }
 }

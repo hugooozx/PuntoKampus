@@ -1,6 +1,6 @@
 # Trabajo compartido
 
-Las dos personas pueden modificar Flutter, Laravel, PostgreSQL y Filament. Cada tarea tiene una persona responsable de implementarla y otra de revisarla. No hay una asignación permanente de frontend o backend.
+Las dos personas pueden modificar Flutter, Laravel, MySQL y Filament. Cada tarea tiene una persona responsable de implementarla y otra de revisarla. No hay una asignación permanente de frontend o backend.
 
 ## Una rama por tarea
 

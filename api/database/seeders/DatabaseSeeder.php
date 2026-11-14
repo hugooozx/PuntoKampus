@@ -8,6 +8,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(CatalogosInicialesSeeder::class);
+        // Base vacia por decision del producto. Los catalogos se cargan expresamente.
     }
 }

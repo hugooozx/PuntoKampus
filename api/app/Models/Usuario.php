@@ -10,12 +10,12 @@ class Usuario extends Authenticatable
 
     const UPDATED_AT = 'actualizado_en';
 
-    protected $fillable = ['correo', 'nombres', 'codigo_estudiante', 'facultad', 'carrera', 'semestre', 'whatsapp', 'mostrar_whatsapp', 'acepto_privacidad_en'];
+    protected $fillable = ['correo', 'nombres', 'acepto_privacidad_en'];
 
     protected $hidden = ['correo', 'codigo_estudiante', 'facultad', 'carrera', 'semestre', 'whatsapp', 'es_admin', 'acepto_privacidad_en'];
 
     protected function casts(): array
     {
-        return ['es_admin' => 'boolean', 'mostrar_whatsapp' => 'boolean', 'acepto_privacidad_en' => 'datetime'];
+        return ['es_admin' => 'boolean', 'acepto_privacidad_en' => 'datetime'];
     }
 }

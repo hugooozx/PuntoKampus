@@ -1,6 +1,6 @@
 # Base de datos de PuntoKampus
 
-Diseño del tramo 1, 14 de noviembre de 2026. El destino elegido para esta entrega es **MySQL 8.4 LTS**, conforme a la preferencia posterior del usuario. Sustituye PostgreSQL como objetivo del diseño; la integración de Laravel con esta nueva estructura se hará en una tarea posterior.
+Diseño del tramo 1, 14 de noviembre de 2026. El destino elegido para esta entrega es **MySQL 8.4 LTS**, conforme a la preferencia posterior del usuario. Sustituye PostgreSQL como objetivo del diseño; la integración de Laravel con esta estructura se documenta en [api/README.md](../../api/README.md).
 
 El entregable es [puntokampus.sql](puntokampus.sql): **19 tablas, 3 vistas y cero registros iniciales**. No incluye tiendas ficticias, usuarios, cuentas bancarias, categorías ni una configuración precargada. Tampoco crea usuarios del servidor MySQL ni incluye contraseñas.
 
@@ -138,7 +138,7 @@ El PRD original se conserva como referencia histórica. El cambio de motor y la 
 - Respuesta de usuario: conservar `facultad` y `carrera` como nombres para mostrar, y agregar `facultad_id` y `carrera_id` para los selectores.
 - Flutter: selector de facultad y selector dependiente de carrera. Laravel: validar que ambos catálogos estén activos y derivar la facultad desde la carrera; no guardar una facultad contradictoria enviada por la app.
 
-Las migraciones existentes de `api/` todavía crean el esquema anterior. **No ejecutar `php artisan migrate` sobre una base creada con este archivo hasta adaptar y conciliar las migraciones.** Para un proyecto vacío, las futuras migraciones deben reproducir este diseño; para una base con datos, se necesita una migración incremental revisada. Nunca borrar una base existente para resolver esa diferencia.
+La migración nueva de `api/` ya crea este esquema o adopta sus tablas tras verificar sus definiciones; las migraciones antiguas están archivadas. Para una base con estructura anterior y datos se necesita una migración incremental revisada. Nunca borrar una base existente para resolver una diferencia. Ver [integración MySQL v1](../../docs/integracion-mysql-v1.md).
 
 Este modelo incluye las tablas del dominio y los tokens de acceso. Las tablas técnicas de Laravel para migraciones, colas o caché se definirán al integrar sus controladores, también con nombres en español si se almacenan en MySQL; no se mezclan aquí con el modelo de negocio. No hay tablas de destacados pagados, estrellas, existencias exactas ni otras funciones del tramo 2.
 

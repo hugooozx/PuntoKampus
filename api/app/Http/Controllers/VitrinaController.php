@@ -16,18 +16,18 @@ class VitrinaController extends Controller
 {
     public function categorias()
     {
-        return response()->json(['data' => Categoria::where('activa', true)->orderBy('orden')->orderBy('id')->get()]);
+        return response()->json(['data' => Categoria::where('activa', true)->orderBy('orden')->orderBy('id')->get(['id', 'nombre', 'activa', 'orden'])]);
     }
 
     public function puntosEntrega()
     {
-        return response()->json(['data' => PuntoEntrega::where('activa', true)->orderBy('orden')->orderBy('id')->get()]);
+        return response()->json(['data' => PuntoEntrega::where('activa', true)->orderBy('orden')->orderBy('id')->get(['id', 'nombre', 'descripcion', 'activa', 'orden'])]);
     }
 
     private function categoria(Builder $query, BuscarVitrinaRequest $request): void
     {
         if ($request->filled('categoria')) {
-            $query->where(fn (Builder $q) => $q->where('categoria_1_id', $request->integer('categoria'))->orWhere('categoria_2_id', $request->integer('categoria')));
+            $query->whereHas('categorias', fn (Builder $q) => $q->where('categorias.id', $request->integer('categoria')));
         }
     }
 
@@ -61,7 +61,7 @@ class VitrinaController extends Controller
 
     public function tienda(string $slug)
     {
-        return new TiendaResource(Tienda::activas()->where('slug', $slug)->with(['usuario', 'productos' => fn ($q) => $q->orderBy('id'), 'productos.fotos'])->firstOrFail());
+        return new TiendaResource(Tienda::activas()->where('slug', $slug)->with(['productos' => fn ($q) => $q->orderBy('id'), 'productos.fotos'])->firstOrFail());
     }
 
     public function productos(BuscarVitrinaRequest $request)

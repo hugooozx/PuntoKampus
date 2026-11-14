@@ -2,22 +2,22 @@
 
 Vitrina digital de emprendimientos de estudiantes de la Universidad Técnica de Babahoyo. **Tu campus, tus emprendimientos** es el eslogan propuesto para esta primera versión, todavía provisional.
 
-El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **PostgreSQL para los datos** y **Filament para administración**. Ambos desarrolladores trabajan en todo el stack: la división se hace por funcionalidades, no por tecnologías.
+El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **MySQL 8.4 para los datos** y **Filament para administración**. Ambos desarrolladores trabajan en todo el stack: la división se hace por funcionalidades, no por tecnologías.
 
 ## Estado de este incremento
 
-Esta entrega inicia la aplicación Flutter con datos ficticios y recorridos locales de demostración, junto con la base de la API de Vitrina. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
+La API de Vitrina ya consulta la base real MySQL 8.4 aprobada, mediante migraciones verificadas. La interfaz Flutter conserva por ahora sus datos locales mientras se prepara la conexión. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
 
 La app guarda los cambios de demostración en el navegador o dispositivo. La API ya expone las rutas públicas de Vitrina. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). La conexión de Flutter a la API, el acceso institucional y el panel Filament quedan para los siguientes incrementos.
 
 ## Carpetas
 
-**Actualización del 14 de noviembre de 2026:** el diseño de la base cambia a **MySQL 8.4** por solicitud del usuario. El [SQL completo y vacío](database/mysql/puntokampus.sql), el [modelo de relaciones](database/mysql/modelo.md) y las [reglas e impacto de integración](database/mysql/README.md) están disponibles. La API inicial descrita abajo todavía requiere adaptación; no ejecutar sus migraciones antiguas sobre el nuevo esquema.
+**Actualización del 14 de noviembre de 2026:** el diseño de la base cambia a **MySQL 8.4** por solicitud del usuario. El [SQL completo y vacío](database/mysql/puntokampus.sql), el [modelo de relaciones](database/mysql/modelo.md) y las [reglas e impacto de integración](database/mysql/README.md) están disponibles. La integración de Laravel ya está implementada; las migraciones anteriores están archivadas. Ver [estado de integración](docs/integracion-mysql-v1.md).
 
 | Ruta | Contenido |
 | --- | --- |
 | `app/` | Aplicación Flutter para Android y web |
-| `api/` | API de Vitrina en Laravel, preparada para PostgreSQL |
+| `api/` | API de Vitrina en Laravel conectada a MySQL 8.4 |
 | `docs/prd/` | Los nueve archivos originales del PRD, copiados sin modificaciones |
 | `docs/contexto/` | Contexto original del proyecto |
 | `database/mysql/` | Diseño MySQL 8.4 en 3FN, SQL completo, diagrama y pruebas |
@@ -60,7 +60,7 @@ Para probar el recorrido, abre Vitrina, elige Productos y agrega un brownie. Com
 
 ## Ejecutar la API
 
-La configuración, migraciones, catálogos iniciales y pruebas se describen en [api/README.md](api/README.md). PostgreSQL es la base acordada para el despliegue. La suite de Laravel utiliza SQLite en memoria.
+En esta computadora, abrir `Iniciar API.cmd`. La API se sirve en `http://127.0.0.1:8000` y MySQL en `127.0.0.1:3307`. Las bases de desarrollo y pruebas están separadas. La configuración, migraciones y pruebas con MySQL real se describen en [api/README.md](api/README.md). La instalación no carga contenido.
 
 Los archivos `.env` son locales. Cada desarrollador crea el suyo a partir del ejemplo y configura sus propios servicios. Nunca se comparten credenciales, claves privadas ni comprobantes reales mediante Git.
 
