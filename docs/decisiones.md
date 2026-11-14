@@ -32,3 +32,11 @@ Registro inicial: 13 de noviembre de 2026. Esta nota distingue las decisiones po
 - El contrato `docs/prd/04-datos-reglas-y-api.md` se conserva. Cualquier cambio de campos o respuestas requiere explicar su impacto en cliente y servidor.
 - Una demostración local no equivale a un piloto con usuarios reales. El acceso OTP, correo, conexión con API, persistencia remota y operaciones de administración se validan antes de usar datos reales.
 - El remoto de GitHub, la protección de `main` y el entorno de despliegue están pendientes de configuración.
+
+## Diseño de la base de datos — 14 de noviembre de 2026
+
+- Por solicitud posterior del usuario, se prepara el diseño para **MySQL 8.4 LTS**. Esta decisión sustituye PostgreSQL como motor objetivo; el código inicial de Laravel aún requiere adaptación.
+- El SQL completo está en `database/mysql/puntokampus.sql`: nombres en español y plural, tablas en tercera forma normal, sin datos iniciales y reejecutable sin borrar registros.
+- El modelo separa facultades, carreras y perfiles de vendedores; usa una tabla de asociación para las categorías; calcula totales y vigencia Premium sin duplicarlos en las tablas.
+- Las diferencias con `04-datos-reglas-y-api.md`, la propuesta de campos/rutas académicos y el impacto en Flutter y Laravel se documentan en `database/mysql/README.md`. El PRD original permanece intacto como referencia.
+- Esta entrega es el diseño de datos y su validación en MySQL, no la integración de la API con el nuevo esquema. Las migraciones iniciales no se deben ejecutar sobre este esquema hasta conciliarlas.

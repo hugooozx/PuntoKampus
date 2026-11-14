@@ -12,12 +12,15 @@ La app guarda los cambios de demostración en el navegador o dispositivo. La API
 
 ## Carpetas
 
+**Actualización del 14 de noviembre de 2026:** el diseño de la base cambia a **MySQL 8.4** por solicitud del usuario. El [SQL completo y vacío](database/mysql/puntokampus.sql), el [modelo de relaciones](database/mysql/modelo.md) y las [reglas e impacto de integración](database/mysql/README.md) están disponibles. La API inicial descrita abajo todavía requiere adaptación; no ejecutar sus migraciones antiguas sobre el nuevo esquema.
+
 | Ruta | Contenido |
 | --- | --- |
 | `app/` | Aplicación Flutter para Android y web |
 | `api/` | API de Vitrina en Laravel, preparada para PostgreSQL |
 | `docs/prd/` | Los nueve archivos originales del PRD, copiados sin modificaciones |
 | `docs/contexto/` | Contexto original del proyecto |
+| `database/mysql/` | Diseño MySQL 8.4 en 3FN, SQL completo, diagrama y pruebas |
 | `docs/decisiones.md` | Decisiones vigentes y elementos provisionales |
 | `docs/primeras-tareas.md` | Incrementos y propuesta de reparto del trabajo |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Plantilla de revisión de cambios |
