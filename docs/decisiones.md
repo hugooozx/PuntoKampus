@@ -48,3 +48,9 @@ Registro inicial: 13 de noviembre de 2026. Esta nota distingue las decisiones po
 - La API pública de Vitrina ya consulta MySQL. Los cambios de representación y sus efectos para Flutter se detallan en `docs/integracion-mysql-v1.md`.
 - Desarrollo permanece sin contenido; las pruebas usan una base independiente. No se agregan catálogos ni tiendas automáticamente.
 - La conexión de Flutter, fidelidad visual a las láminas y funcionalidades autenticadas siguen siendo trabajo pendiente.
+
+## Vitrina conectada en Flutter
+
+- La entrada principal de Flutter consume la API real y no inicializa la sesión ficticia de la demo. La referencia antigua queda en `main_demo.dart`, fuera del arranque normal.
+- No se agregan datos de ejemplo a la base para poblar las tarjetas. Se implementan carga, vacío, error, reintento, filtros, páginas y detalles con las respuestas reales.
+- El ajuste visual fiel a las láminas queda pendiente de recuperarlas: no se encontraron en los archivos accesibles y se solicitaron nuevamente al usuario. El skill UI/UX Pro Max guía las comprobaciones de legibilidad e interacción, sin sustituir esas referencias.

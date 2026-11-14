@@ -1,3 +1,3 @@
 @echo off
-python "%~dp0scripts\abrir_demo.py"
+python "%~dp0scripts\iniciar_local.py"
 if errorlevel 1 pause

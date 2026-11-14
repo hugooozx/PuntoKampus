@@ -6,9 +6,9 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **M
 
 ## Estado de este incremento
 
-La API de Vitrina ya consulta la base real MySQL 8.4 aprobada, mediante migraciones verificadas. La interfaz Flutter conserva por ahora sus datos locales mientras se prepara la conexión. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
+La API de Vitrina ya consulta la base real MySQL 8.4 aprobada, mediante migraciones verificadas. La entrada principal de Flutter ya consume esta API y representa los estados vacíos de la base real. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
 
-La app guarda los cambios de demostración en el navegador o dispositivo. La API ya expone las rutas públicas de Vitrina. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). La conexión de Flutter a la API, el acceso institucional y el panel Filament quedan para los siguientes incrementos.
+La app principal consulta las rutas públicas de Vitrina. La referencia antigua de recorridos se conserva separada en `app/lib/main_demo.dart`. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). El acceso institucional, los pedidos, las escrituras y Filament quedan para los siguientes incrementos. La fidelidad visual a las láminas espera recuperar esas referencias.
 
 ## Carpetas
 
@@ -27,7 +27,7 @@ La app guarda los cambios de demostración en el navegador o dispositivo. La API
 
 ## Ejecutar Flutter
 
-En la computadora donde ya está compilada la demo, abre `Abrir PuntoKampus.cmd`. Se necesita Python 3 y la ventana del servidor debe quedar abierta mientras pruebas.
+En esta computadora, abre `Abrir PuntoKampus.cmd`: prepara MySQL/API y sirve la compilación real de Flutter. Se necesita Python 3 y la ventana del servidor debe quedar abierta mientras pruebas. Configuración y alcance en [Flutter conectado a la API](docs/flutter-vitrina-api.md).
 
 Para compilar desde el código se necesita Flutter 3.50 o posterior. Para Android también se requiere Android SDK y un emulador o un dispositivo.
 
@@ -56,7 +56,7 @@ flutter test
 
 En la instalación portátil de esta computadora, usa `../.tools/flutter/bin/flutter.bat` en lugar de `flutter` cuando estés dentro de `app/`.
 
-Para probar el recorrido, abre Vitrina, elige Productos y agrega un brownie. Completa la entrega y revisa el pedido pendiente en Mis pedidos. Desde Cuenta puedes cambiar a Ana Pérez para atender el pedido de Dulces de Ana o a Mateo Ruiz para probar la creación de tienda.
+Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base permanece vacía; no aparecen tiendas ficticias. Cuenta, Mi tienda y Mis pedidos indican que el acceso institucional todavía no está habilitado. La demo antigua solo se ejecuta expresamente con `flutter run -t lib/main_demo.dart`.
 
 ## Ejecutar la API
 

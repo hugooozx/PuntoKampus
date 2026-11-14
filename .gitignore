@@ -1,6 +1,8 @@
 # Herramientas portables y archivos locales de desarrollo
 .tools/
 .local/
+__pycache__/
+*.py[cod]
 .DS_Store
 Thumbs.db
 *.log

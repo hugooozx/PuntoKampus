@@ -1,12 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'domain/preferences_persistence.dart';
-import 'domain/store.dart';
-import 'punto_kampus.dart';
+import 'api/catalog_api.dart';
+import 'real_app.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final store = DemoStore(PreferencesPersistence());
-  await store.initialize();
-  runApp(PuntoKampusApp(store: store));
+  runApp(PuntoKampusRealApp(api: CatalogApi()));
 }

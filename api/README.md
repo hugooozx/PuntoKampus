@@ -1,6 +1,6 @@
 # API real de Vitrina
 
-Laravel 13 con **MySQL 8.4**, sobre la versión 1 de la base aprobada. Las rutas públicas consultan MySQL. La aplicación Flutter todavía requiere conexión con esta API y ajuste visual a las láminas aprobadas.
+Laravel 13 con **MySQL 8.4**, sobre la versión 1 de la base aprobada. Las rutas públicas consultan MySQL. La aplicación Flutter ya consume esta API desde su entrada principal; el ajuste visual fiel a las láminas aprobadas sigue pendiente de recuperarlas.
 
 ## En esta computadora
 
@@ -69,6 +69,6 @@ También se comprobaron los cuatro listados por HTTP contra la base de desarroll
 
 ## Alcance pendiente
 
-La estructura completa está migrada, pero este incremento implementa únicamente las lecturas de Vitrina. Aún faltan acceso institucional, escritura autenticada de tiendas/productos, pedidos, revisión Premium, Filament y conexión de Flutter. Los endpoints académicos propuestos en el diseño no se publican en esta tarea.
+La estructura completa está migrada, pero este incremento implementa únicamente las lecturas de Vitrina. Aún faltan acceso institucional, escritura autenticada de tiendas/productos, pedidos, revisión Premium y Filament. Los endpoints académicos propuestos en el diseño no se publican en esta tarea.
 
 Referencia de implementación: [migraciones de Laravel 13](https://github.com/laravel/docs/blob/13.x/migrations.md) y [pruebas de base de datos](https://github.com/laravel/docs/blob/13.x/database-testing.md).
