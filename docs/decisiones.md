@@ -54,3 +54,12 @@ Registro inicial: 13 de noviembre de 2026. Esta nota distingue las decisiones po
 - La entrada principal de Flutter consume la API real y no inicializa la sesión ficticia de la demo. La referencia antigua queda en `main_demo.dart`, fuera del arranque normal.
 - No se agregan datos de ejemplo a la base para poblar las tarjetas. Se implementan carga, vacío, error, reintento, filtros, páginas y detalles con las respuestas reales.
 - El ajuste visual fiel a las láminas queda pendiente de recuperarlas: no se encontraron en los archivos accesibles y se solicitaron nuevamente al usuario. El skill UI/UX Pro Max guía las comprobaciones de legibilidad e interacción, sin sustituir esas referencias.
+
+## Láminas recuperadas y ajuste visual — 14 de noviembre de 2026
+
+- El usuario compartió `laminas.zip`: siete imágenes conservadas en `docs/diseno/referencias/`. Pidió usarlas como guía y no producir nuevas láminas.
+- Vitrina y detalles públicos adaptados al estilo de esas imágenes; revisión del resultado por el usuario pendiente. No cambia la API ni se inserta contenido en la base.
+- La versión corregida del recorrido de compra es `lamina-07.jpeg`, con «Pendiente» naranja. La anterior con verde queda como referencia histórica.
+- Premium del tramo 1 aporta insignia «Sacó 10» y portada. El plan gratis también permite pedidos sin límite; no hay destacados pagados ni prioridad de orden.
+- Los futuros códigos de pedido serán aleatorios y generados por el servidor. Los números secuenciales de las imágenes son ejemplos, no una regla de implementación.
+- P03, P04, P16, P07 con reporte y P22 usarán el mismo lenguaje visual. Detalles y dependencias en `docs/diseno/README.md`; no se simulan accesos, reportes, pedidos ni eliminaciones exitosas.

@@ -8,7 +8,7 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **M
 
 La API de Vitrina ya consulta la base real MySQL 8.4 aprobada, mediante migraciones verificadas. La entrada principal de Flutter ya consume esta API y representa los estados vacíos de la base real. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
 
-La app principal consulta las rutas públicas de Vitrina. La referencia antigua de recorridos se conserva separada en `app/lib/main_demo.dart`. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). El acceso institucional, los pedidos, las escrituras y Filament quedan para los siguientes incrementos. La fidelidad visual a las láminas espera recuperar esas referencias.
+La app principal consulta las rutas públicas de Vitrina. La referencia antigua de recorridos se conserva separada en `app/lib/main_demo.dart`. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). El acceso institucional, los pedidos, las escrituras y Filament quedan para los siguientes incrementos. Vitrina y los detalles públicos se ajustaron a las [láminas recuperadas](docs/diseno/README.md); la revisión visual del usuario sigue pendiente.
 
 ## Carpetas
 

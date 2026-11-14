@@ -44,7 +44,10 @@ void main() {
       await tester.enterText(find.byType(TextField), 'inexistente');
       await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
-      expect(find.text('No encontramos resultados'), findsOneWidget);
+      expect(
+        find.text('No encontramos nada con «inexistente».'),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
     });
   }
@@ -142,7 +145,9 @@ void main() {
       expect(find.text('\$2.00'), findsOneWidget);
       expect(
         tester
-            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Pedir'))
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, 'Agregar al carrito'),
+            )
             .onPressed,
         isNull,
       );

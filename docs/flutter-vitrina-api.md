@@ -45,18 +45,18 @@ flutter build web --no-web-resources-cdn --dart-define=API_BASE_URL=http://127.0
 
 Después abrir `Abrir PuntoKampus.cmd` en la raíz. Comprueba MySQL y API, y sirve la compilación en `http://127.0.0.1:8766`. El nombre histórico `scripts/abrir_demo.py` se conserva como servidor estático; lo servido es la compilación de la entrada real. Dejar abierta la ventana mientras se usa el sitio. MySQL/API continúan como procesos locales; `python scripts/mysql_local.py detener` detiene MySQL.
 
-## Diseño y referencias pendientes
+## Diseño basado en las láminas
 
-Se conservaron el logo PK, el acento naranja, el fondo cálido y la navegación móvil/escritorio. Se aplicaron las reglas de estados, legibilidad y tamaños táctiles del skill UI/UX Pro Max compartido por el usuario.
+El usuario proporcionó nuevamente las siete imágenes el 14 de noviembre. La Vitrina utiliza ahora tarjetas compactas para tiendas, productos en dos columnas en celular, insignias de color, etiqueta de búsqueda sobre el campo, selector rectangular y tipografía Inter local. Navegación, galería de producto y detalle de tienda comparten el estilo. Ver [referencias, decisiones y pantallas pendientes](diseno/README.md).
 
-Las láminas aprobadas no se encontraron entre los archivos accesibles ni los adjuntos recuperables de este chat. Se solicitaron nuevamente. **No se afirma que esta interfaz reproduzca esas láminas**: la revisión de tipografía, composición y detalles contra las imágenes queda pendiente de recibirlas. Esta entrega avanza la conexión real sin declarar aprobado un rediseño.
+No se generaron láminas nuevas ni se cargó contenido en MySQL. La revisión del resultado por parte del usuario sigue pendiente. Acciones autenticadas continúan pendientes de sus servicios; el botón de reportar en la tienda es visible pero está deshabilitado.
 
 ## Validación
 
 - `flutter analyze`: sin incidencias.
-- `flutter test`: 15 pruebas aprobadas (11 nuevas de conexión/interfaz y 4 de la referencia anterior).
+- `flutter test`: 25 pruebas aprobadas (21 de la aplicación real y 4 de la referencia anterior).
 - Casos cubiertos: filtros enviados a la API, UTF-8, precios decimales, respuesta obsoleta, siguiente página fallida con reintento, timeout, 404, JSON inválido, controlador eliminado durante una petición y ausencia de datos ficticios.
-- Widgets revisados a 320, 390 y 1440 px, reintento desplazando la pantalla y recorrido de producto agotado a tienda con punto de entrega real en la respuesta de prueba.
+- Widgets revisados a 320, 375, 390, 768, 844 y 1440 px; tarjetas también con texto al doble y movimiento reducido. Se comprueban filtros, orden sin prioridad Premium, puntos de entrega y recorrido de producto agotado a tienda.
 - Compilación web y comprobación en Edge contra Laravel/MySQL local: peticiones HTTP 200 desde el navegador para tiendas, categorías y puntos de entrega, sin errores JavaScript. La base no se pobló para esta comprobación.
 
 Con Node 24 y Edge instalados, API activa y web compilada, ejecutar desde la raíz `node scripts/verificar_vitrina_web.mjs`. Capturas y registro de peticiones quedan en `.local/verificaciones/`, fuera de Git. El script abre y cierra su propio navegador de prueba; no utiliza el perfil personal del usuario.

@@ -2,8 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import 'api/catalog_api.dart';
 import 'api/catalog_controller.dart';
-import 'ui/common.dart'
-    show Brand, PageBody, TitleBlock, orange, ink, canvas, line;
+import 'ui/kampus_design.dart';
+import 'ui/catalog_cards.dart';
 
 class PuntoKampusRealApp extends StatefulWidget {
   const PuntoKampusRealApp({super.key, required this.api});
@@ -26,36 +26,7 @@ class _RealAppState extends State<PuntoKampusRealApp> {
     locale: const Locale('es'),
     supportedLocales: const [Locale('es')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: ThemeData(
-      useMaterial3: true,
-      visualDensity: VisualDensity.standard,
-      colorScheme: ColorScheme.fromSeed(seedColor: orange)
-          .copyWith(primary: orange, surface: canvas, onSurface: ink),
-      scaffoldBackgroundColor: canvas,
-      textTheme: const TextTheme(
-        bodyMedium: TextStyle(fontSize: 16, height: 1.5),
-        headlineMedium: TextStyle(
-          fontSize: 32,
-          height: 1.15,
-          fontWeight: FontWeight.w800,
-          color: ink,
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(minimumSize: const Size(48, 48)),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-      ),
-      inputDecorationTheme: InputDecorationThemeData(
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: line),
-        ),
-      ),
-    ),
+    theme: kampusTheme(),
     onGenerateRoute: (settings) {
       final path = Uri.tryParse(settings.name ?? '/')?.path ?? '/';
       final match = RegExp(r'^/t/([a-z0-9-]+)$').firstMatch(path);
@@ -75,6 +46,20 @@ const destinations = [
   (label: 'Mi tienda', icon: Icons.store_mall_directory_outlined),
   (label: 'Cuenta', icon: Icons.person_outline),
 ];
+
+void openEntry(BuildContext context, CatalogApi api, CatalogEntry entry) {
+  if (entry.isProduct) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ShopScreen(api: api, slug: entry.slug, productId: entry.id),
+      ),
+    );
+  } else {
+    Navigator.pushNamed(context, '/t/${entry.slug}');
+  }
+}
 
 class RealShell extends StatefulWidget {
   const RealShell({super.key, required this.api});
@@ -113,7 +98,7 @@ class _RealShellState extends State<RealShell> {
                 icon: destination.icon,
                 title: 'Próximamente',
                 message: 'Esta sección estará disponible cuando se habilite el acceso con tu correo institucional.',
-                action: TextButton(
+                action: OutlinedButton(
                   onPressed: () => setState(() => tab = 0),
                   child: const Text('Explorar la vitrina'),
                 ),
@@ -123,70 +108,160 @@ class _RealShellState extends State<RealShell> {
       ],
     );
     return Scaffold(
-      appBar: desktop
-          ? null
-          : AppBar(
-              title: const Brand(small: true),
-              toolbarHeight: 72,
-              backgroundColor: Colors.white,
-            ),
       body: SafeArea(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (desktop)
               Container(
-                width: 240,
+                width: 280,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   border: Border(right: BorderSide(color: line)),
                 ),
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(16, 32, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Brand(),
-                    const SizedBox(height: 36),
-                    for (var i = 0; i < destinations.length; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Material(
-                          color: tab == i
-                              ? const Color(0xFFFFEBDD)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          child: ListTile(
-                            selected: tab == i,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            leading: Icon(destinations[i].icon),
-                            title: Text(destinations[i].label),
-                            onTap: () => setState(() => tab = i),
+                    Expanded(
+                      child: ListView(
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Brand(),
                           ),
-                        ),
+                          const SizedBox(height: 36),
+                          for (var i = 0; i < destinations.length; i++)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Semantics(
+                                selected: tab == i,
+                                child: TextButton(
+                                  onPressed: () => setState(() => tab = i),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: tab == i ? orange : ink,
+                                    backgroundColor: tab == i
+                                        ? peach
+                                        : Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 18,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(destinations[i].icon, size: 28),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Text(
+                                          destinations[i].label,
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: tab == i
+                                                ? FontWeight.w700
+                                                : FontWeight.w400,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                    const Spacer(),
-                    const Text(
-                      'Tu campus,\ntus emprendimientos.',
-                      style: TextStyle(color: Color(0xFF555D57), height: 1.5),
+                    ),
+                    const Divider(),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'Tu campus,\ntus emprendimientos.',
+                        style: TextStyle(color: muted, height: 1.5),
+                      ),
                     ),
                   ],
                 ),
               ),
-            Expanded(child: body),
+            Expanded(
+              child: Column(
+                children: [
+                  if (!desktop)
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+                      child: Brand(),
+                    ),
+                  Expanded(child: body),
+                ],
+              ),
+            ),
           ],
         ),
       ),
       bottomNavigationBar: desktop
           ? null
-          : NavigationBar(
-              selectedIndex: tab,
-              onDestinationSelected: (value) => setState(() => tab = value),
-              destinations: [
-                for (final d in destinations)
-                  NavigationDestination(icon: Icon(d.icon), label: d.label),
-              ],
+          : DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: line)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (var i = 0; i < destinations.length; i++)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 2),
+                            child: Semantics(
+                              selected: tab == i,
+                              child: TextButton(
+                                onPressed: () => setState(() => tab = i),
+                                style: TextButton.styleFrom(
+                                  backgroundColor: tab == i
+                                      ? peach
+                                      : Colors.white,
+                                  foregroundColor: tab == i ? orange : ink,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(destinations[i].icon, size: 26),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      destinations[i].label,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        height: 1.25,
+                                        fontWeight: tab == i
+                                            ? FontWeight.w700
+                                            : FontWeight.w400,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
     );
   }
@@ -213,31 +288,64 @@ class _RealCatalogState extends State<RealCatalog> {
     builder: (context, _) {
       final c = widget.controller;
       final noun = c.products ? 'productos' : 'tiendas';
+      final desktop = MediaQuery.sizeOf(context).width >= 1000;
       return RefreshIndicator(
         onRefresh: c.refresh,
         child: SingleChildScrollView(
           key: const PageStorageKey('vitrina'),
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.all(
-            MediaQuery.sizeOf(context).width < 600 ? 20 : 36,
+          padding: EdgeInsets.fromLTRB(
+            desktop ? 40 : 16,
+            desktop ? 40 : 12,
+            desktop ? 40 : 16,
+            32,
           ),
-          child: Center(
+          child: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1080),
+              constraints: const BoxConstraints(maxWidth: 1120),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const TitleBlock(
+                  if (desktop)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'EMPRENDIMIENTOS DE LA UTB',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  Text(
                     'Vitrina',
-                    subtitle: 'Descubre lo que se crea en tu campus.',
+                    style: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(fontSize: desktop ? 44 : 32),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Descubre lo que se crea en tu campus.',
+                    style: TextStyle(fontSize: desktop ? 18 : 16),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Buscar tiendas o productos',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: search,
                     onChanged: (text) => c.filter(text: text),
+                    textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
-                      labelText: 'Buscar tiendas o productos',
                       hintText: '¿Qué estás buscando?',
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: ink,
+                        size: 26,
+                      ),
                       suffixIcon: search.text.isEmpty
                           ? null
                           : IconButton(
@@ -250,7 +358,7 @@ class _RealCatalogState extends State<RealCatalog> {
                             ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -258,62 +366,52 @@ class _RealCatalogState extends State<RealCatalog> {
                         for (final option in [null, ...c.categories])
                           Padding(
                             padding: const EdgeInsets.only(right: 8),
-                            child: ChoiceChip(
-                              label: Text(option?.name ?? 'Todas'),
+                            child: Semantics(
                               selected: c.category == option?.id,
-                              showCheckmark: false,
-                              selectedColor: orange,
-                              labelStyle: TextStyle(
-                                color: c.category == option?.id
-                                    ? Colors.white
-                                    : ink,
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 12,
-                              ),
-                              onSelected: (_) => c.filter(
-                                categoryId: option?.id,
-                                changeCategory: true,
+                              child: OutlinedButton(
+                                onPressed: () => c.filter(
+                                  categoryId: option?.id,
+                                  changeCategory: true,
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: c.category == option?.id
+                                      ? orange
+                                      : Colors.white,
+                                  foregroundColor: c.category == option?.id
+                                      ? Colors.white
+                                      : ink,
+                                  side: BorderSide(
+                                    color: c.category == option?.id
+                                        ? orange
+                                        : line,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 12,
+                                  ),
+                                  textStyle: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 15,
+                                    fontWeight: c.category == option?.id
+                                        ? FontWeight.w700
+                                        : FontWeight.w400,
+                                  ),
+                                ),
+                                child: Text(option?.name ?? 'Todas'),
                               ),
                             ),
                           ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: SegmentedButton<bool>(
-                      showSelectedIcon: false,
-                      style: const ButtonStyle(
-                        minimumSize: WidgetStatePropertyAll(Size(120, 48)),
-                      ),
-                      segments: const [
-                        ButtonSegment(
-                          value: false,
-                          label: Text('Tiendas'),
-                          icon: Icon(Icons.storefront_outlined),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          label: Text('Productos'),
-                          icon: Icon(Icons.local_mall_outlined),
-                        ),
-                      ],
-                      selected: {c.products},
-                      onSelectionChanged: (values) =>
-                          c.filter(showProducts: values.first),
-                    ),
+                  const SizedBox(height: 16),
+                  CatalogSwitch(
+                    products: c.products,
+                    onChanged: (value) => c.filter(showProducts: value),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 16),
                   if (c.loading)
-                    const StatusPanel(
-                      icon: Icons.hourglass_empty,
-                      title: 'Cargando la vitrina',
-                      message: 'Un momento, por favor.',
-                      busy: true,
-                    )
+                    const _CatalogSkeleton()
                   else if (c.error != null)
                     StatusPanel(
                       icon: Icons.wifi_off_outlined,
@@ -327,16 +425,18 @@ class _RealCatalogState extends State<RealCatalog> {
                   else if (c.entries.isEmpty)
                     StatusPanel(
                       icon: c.filtered
-                          ? Icons.search_off
+                          ? Icons.search
                           : Icons.storefront_outlined,
                       title: c.filtered
-                          ? 'No encontramos resultados'
+                          ? (c.term.trim().isEmpty
+                                ? 'No encontramos resultados'
+                                : 'No encontramos nada con «${c.term.trim()}».')
                           : 'La vitrina está por estrenarse',
                       message: c.filtered
-                          ? 'No encontramos nada${c.term.trim().isEmpty ? '' : ' con «${c.term.trim()}»'}. Prueba con otra palabra o revisa las categorías.'
-                          : 'Todavía no hay $noun publicados. Aquí descubrirás los emprendimientos de la comunidad UTB.',
+                          ? 'Prueba con otra palabra o revisa las categorías.'
+                          : 'Todavía no hay $noun. Aquí descubrirás los emprendimientos de la comunidad UTB.',
                       action: c.filtered
-                          ? TextButton(
+                          ? FilledButton(
                               onPressed: () {
                                 search.clear();
                                 c.term = '';
@@ -345,9 +445,9 @@ class _RealCatalogState extends State<RealCatalog> {
                                   changeCategory: true,
                                 );
                               },
-                              child: const Text('Limpiar filtros'),
+                              child: const Text('Limpiar búsqueda'),
                             )
-                          : TextButton.icon(
+                          : OutlinedButton.icon(
                               onPressed: c.refresh,
                               icon: const Icon(Icons.refresh),
                               label: const Text('Actualizar'),
@@ -355,14 +455,19 @@ class _RealCatalogState extends State<RealCatalog> {
                     )
                   else ...[
                     Text(
-                      '${c.total} $noun',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      '${c.total} ${c.total == 1 ? (c.products ? 'producto' : 'tienda') : noun}',
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     EntryGrid(
                       entries: c.entries,
                       api: c.api,
                       categories: c.categories,
+                      points: c.points,
+                      onOpen: (entry) => openEntry(context, c.api, entry),
                     ),
                     if (c.moreError != null)
                       Padding(
@@ -398,221 +503,52 @@ class _RealCatalogState extends State<RealCatalog> {
   );
 }
 
-class StatusPanel extends StatelessWidget {
-  const StatusPanel({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.message,
-    this.action,
-    this.busy = false,
-  });
-  final IconData icon;
-  final String title, message;
-  final Widget? action;
-  final bool busy;
+class _CatalogSkeleton extends StatelessWidget {
+  const _CatalogSkeleton();
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: line),
-    ),
-    child: Column(
-      children: [
-        if (busy)
-          const CircularProgressIndicator(semanticsLabel: 'Cargando')
-        else
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFEBDD),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: orange, size: 34),
-          ),
-        const SizedBox(height: 20),
-        Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 21),
-        ),
-        const SizedBox(height: 10),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 440),
-          child: Text(message, textAlign: TextAlign.center),
-        ),
-        if (action != null) ...[const SizedBox(height: 20), action!],
-      ],
-    ),
-  );
-}
-
-class EntryGrid extends StatelessWidget {
-  const EntryGrid({
-    super.key,
-    required this.entries,
-    required this.api,
-    this.categories = const [],
-  });
-  final List<CatalogEntry> entries;
-  final CatalogApi api;
-  final List<CatalogOption> categories;
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final columns = constraints.maxWidth >= 900
-          ? 3
-          : constraints.maxWidth >= 620
-          ? 2
-          : 1;
-      final width = (constraints.maxWidth - 16 * (columns - 1)) / columns;
-      return Wrap(
-        spacing: 16,
-        runSpacing: 16,
+  Widget build(BuildContext context) => Semantics(
+    label: 'Cargando la vitrina',
+    liveRegion: true,
+    child: ExcludeSemantics(
+      child: Column(
         children: [
-          for (final entry in entries)
-            SizedBox(
-              width: width,
-              child: Card(
-                clipBehavior: Clip.antiAlias,
-                elevation: 0,
+          for (var i = 0; i < 3; i++)
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
                 color: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(color: line),
-                ),
-                child: InkWell(
-                  onTap: () {
-                    if (entry.isProduct) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ShopScreen(
-                            api: api,
-                            slug: entry.slug,
-                            productId: entry.id,
-                          ),
-                        ),
-                      );
-                    } else {
-                      Navigator.pushNamed(context, '/t/${entry.slug}');
-                    }
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      CatalogImage(
-                        api: api,
-                        url: entry.image,
-                        label: entry.name,
-                        height: 170,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(18),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.name,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            if (entry.isProduct) ...[
-                              Text(
-                                '\$${entry.price}',
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: orange,
-                                ),
-                              ),
-                              Text(
-                                entry.available ? 'Disponible' : 'Agotado',
-                                style: TextStyle(
-                                  color: entry.available
-                                      ? const Color(0xFF246640)
-                                      : const Color(0xFF795222),
-                                ),
-                              ),
-                            ] else ...[
-                              Text(
-                                entry.premium ? 'Sacó 10' : 'Matriculado',
-                                style: const TextStyle(
-                                  color: orange,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              if (categories
-                                      .where((c) => c.id == entry.category)
-                                      .firstOrNull
-                                  case final category?)
-                                Text(category.name),
-                            ],
-                            if (entry.description.isNotEmpty) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                entry.description,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: line),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: softGray,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(height: 16, width: 160, color: softGray),
+                        const SizedBox(height: 12),
+                        Container(height: 12, width: 100, color: softGray),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
-      );
-    },
-  );
-}
-
-class CatalogImage extends StatelessWidget {
-  const CatalogImage({
-    super.key,
-    required this.api,
-    this.url,
-    required this.label,
-    this.height = 200,
-  });
-  final CatalogApi api;
-  final String? url;
-  final String label;
-  final double height;
-  @override
-  Widget build(BuildContext context) {
-    Widget placeholder() => Container(
-      height: height,
-      color: const Color(0xFFF2EEE8),
-      alignment: Alignment.center,
-      child: const Icon(
-        Icons.image_outlined,
-        color: Color(0xFF756D63),
-        size: 40,
-        semanticLabel: 'Sin imagen',
       ),
-    );
-    return url == null || url!.isEmpty
-        ? placeholder()
-        : Image.network(
-            api.imageUrl(url!),
-            height: height,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            semanticLabel: label,
-            errorBuilder: (_, _, _) => placeholder(),
-          );
-  }
+    ),
+  );
 }
 
 class ShopScreen extends StatefulWidget {
@@ -627,6 +563,85 @@ class ShopScreen extends StatefulWidget {
   final int? productId;
   @override
   State<ShopScreen> createState() => _ShopScreenState();
+}
+
+class _ShopFact extends StatelessWidget {
+  const _ShopFact({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 22),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text)),
+    ],
+  );
+}
+
+class _ProductGallery extends StatefulWidget {
+  const _ProductGallery({required this.api, required this.product});
+  final CatalogApi api;
+  final CatalogEntry product;
+  @override
+  State<_ProductGallery> createState() => _ProductGalleryState();
+}
+
+class _ProductGalleryState extends State<_ProductGallery> {
+  final pages = PageController();
+  int current = 0;
+  @override
+  void dispose() {
+    pages.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final photos = (widget.product.json['fotos'] as List? ?? [])
+        .map((p) => p['url'] as String)
+        .toList();
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: AspectRatio(
+            aspectRatio: 1.25,
+            child: photos.isEmpty
+                ? CatalogImage(api: widget.api, label: widget.product.name)
+                : PageView.builder(
+                    controller: pages,
+                    itemCount: photos.length,
+                    onPageChanged: (index) => setState(() => current = index),
+                    itemBuilder: (context, index) => CatalogImage(
+                      api: widget.api,
+                      url: photos[index],
+                      label:
+                          '${widget.product.name}, foto ${index + 1} de ${photos.length}',
+                    ),
+                  ),
+          ),
+        ),
+        if (photos.length > 1)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < photos.length; i++)
+                IconButton(
+                  tooltip: 'Ver foto ${i + 1}',
+                  onPressed: () => pages.jumpToPage(i),
+                  icon: Icon(
+                    current == i ? Icons.circle : Icons.circle_outlined,
+                    size: 10,
+                    color: current == i ? orange : muted,
+                  ),
+                ),
+            ],
+          ),
+      ],
+    );
+  }
 }
 
 class _ShopScreenState extends State<ShopScreen> {
@@ -662,7 +677,9 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.productId == null ? 'Tienda' : 'Producto'),
+      title: Text(
+        widget.productId == null ? 'Tienda' : 'Producto',
+      ),
     ),
     body: FutureBuilder(
       future: future,
@@ -721,114 +738,192 @@ class _ShopScreenState extends State<ShopScreen> {
             );
           }
           return PageBody(
+            width: 1040,
             children: [
-              TitleBlock(product.name, subtitle: shop.name),
-              CatalogImage(
-                api: widget.api,
-                url: product.image,
-                label: product.name,
-                height: 280,
-              ),
-              if ((product.json['fotos'] as List? ?? []).length > 1)
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final photo in (product.json['fotos'] as List).skip(1))
-                      SizedBox(
-                        width: 120,
-                        child: CatalogImage(
-                          api: widget.api,
-                          url: photo['url'] as String,
-                          label: product.name,
-                          height: 100,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final info = Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        product.name,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () =>
+                              Navigator.pushNamed(context, '/t/${shop.slug}'),
+                          icon: const Icon(Icons.storefront_outlined),
+                          label: Text(shop.name),
+                          style: TextButton.styleFrom(
+                            foregroundColor: ink,
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
-                  ],
-                ),
-              const SizedBox(height: 24),
-              Text(
-                '\$${product.price}',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              Text(product.available ? 'Disponible' : 'Agotado'),
-              const SizedBox(height: 16),
-              Text(product.description),
-              const SizedBox(height: 24),
-              const FilledButton(onPressed: null, child: Text('Pedir')),
-              const SizedBox(height: 8),
-              const Text('Los pedidos todavía no están habilitados.'),
-              TextButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, '/t/${shop.slug}'),
-                child: const Text('Ver tienda'),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: KampusBadge.availability(
+                          available: product.available,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '\$${product.price}',
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(product.description),
+                      const SizedBox(height: 24),
+                      const FilledButton(
+                        onPressed: null,
+                        child: Text('Agregar al carrito'),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Los pedidos todavía no están habilitados.',
+                        style: TextStyle(color: muted, fontSize: 14),
+                      ),
+                      TextButton(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/t/${shop.slug}'),
+                        child: const Text('Ver tienda'),
+                      ),
+                    ],
+                  );
+                  final gallery = _ProductGallery(
+                    api: widget.api,
+                    product: product,
+                  );
+                  return constraints.maxWidth >= 800
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: gallery),
+                            const SizedBox(width: 40),
+                            Expanded(child: info),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [gallery, const SizedBox(height: 20), info],
+                        );
+                },
               ),
             ],
           );
         }
+        final categoryNames = snapshot.data!.categories
+            .where(
+              (category) => [
+                shop.json['categoria_1_id'],
+                shop.json['categoria_2_id'],
+              ].contains(category.id),
+            )
+            .map((category) => category.name)
+            .join(' · ');
         return PageBody(
           children: [
-            if (shop.image != null)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  width: 80,
-                  child: CatalogImage(
-                    api: widget.api,
-                    url: shop.image,
-                    label: shop.name,
-                    height: 80,
+            Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border.all(color: line),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (shop.premium && shop.json['portada_url'] != null)
+                    CatalogImage(
+                      api: widget.api,
+                      url: shop.json['portada_url'] as String,
+                      label: 'Portada de ${shop.name}',
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 80,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: CatalogImage(
+                                  api: widget.api,
+                                  url: shop.image,
+                                  label: shop.name,
+                                  height: 80,
+                                  shop: true,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    shop.name,
+                                    style: const TextStyle(
+                                      fontSize: 26,
+                                      height: 1.15,
+                                      letterSpacing: -0.6,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  KampusBadge.plan(premium: shop.premium),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(shop.description),
+                        if (categoryNames.isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          _ShopFact(
+                            icon: Icons.sell_outlined,
+                            text: categoryNames,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        _ShopFact(
+                          icon: Icons.location_on_outlined,
+                          text:
+                              'Entrega: ${snapshot.data!.points.where((point) => point.id == shop.json['punto_entrega_id']).firstOrNull?.name ?? 'Punto habitual no disponible'}',
+                        ),
+                        if (shop.json['horario']
+                            case final String schedule) ...[
+                          const SizedBox(height: 12),
+                          _ShopFact(
+                            icon: Icons.schedule,
+                            text: 'Horario: $schedule',
+                          ),
+                        ],
+                        if (shop.json['whatsapp'] case final String phone) ...[
+                          const SizedBox(height: 12),
+                          SelectableText('WhatsApp: +$phone'),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-              ),
-            const SizedBox(height: 16),
-            TitleBlock(shop.name, subtitle: shop.description),
-            Text(
-              snapshot.data!.categories
-                  .where(
-                    (category) => [
-                      shop.json['categoria_1_id'],
-                      shop.json['categoria_2_id'],
-                    ].contains(category.id),
-                  )
-                  .map((category) => category.name)
-                  .join(' · '),
-            ),
-            Text(
-              shop.premium ? 'Sacó 10' : 'Matriculado',
-              style: const TextStyle(
-                color: orange,
-                fontWeight: FontWeight.w700,
+                ],
               ),
             ),
-            if (shop.premium && shop.json['portada_url'] != null) ...[
-              const SizedBox(height: 16),
-              CatalogImage(
-                api: widget.api,
-                url: shop.json['portada_url'] as String,
-                label: shop.name,
-              ),
-            ],
-            if (shop.json['horario'] case final String schedule)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text('Horario: $schedule'),
-              ),
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Entrega: ${snapshot.data!.points.where((point) => point.id == shop.json['punto_entrega_id']).firstOrNull?.name ?? 'Punto habitual no disponible'}',
-              ),
-            ),
-            if (shop.json['whatsapp'] case final String phone)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: SelectableText('WhatsApp: +$phone'),
-              ),
             const SizedBox(height: 28),
             const Text(
               'Productos',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.6,
+              ),
             ),
             const SizedBox(height: 16),
             if (products.isEmpty)
@@ -838,7 +933,26 @@ class _ShopScreenState extends State<ShopScreen> {
                 message: 'Esta tienda todavía no ha publicado productos.',
               )
             else
-              EntryGrid(entries: products, api: widget.api),
+              EntryGrid(
+                entries: products,
+                api: widget.api,
+                onOpen: (entry) => openEntry(context, widget.api, entry),
+              ),
+            const SizedBox(height: 28),
+            const Divider(),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: null,
+                icon: const Icon(Icons.flag_outlined),
+                label: const Text('Reportar tienda'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Los reportes todavía no están habilitados.',
+              style: TextStyle(color: muted, fontSize: 14),
+            ),
           ],
         );
       },
