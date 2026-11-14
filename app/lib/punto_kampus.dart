@@ -279,18 +279,21 @@ class _ShellState extends State<_Shell> {
                     const Spacer(),
                     const Divider(color: line),
                     if (store.user case final user?)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFFFF0E5),
-                          child: Icon(Icons.person_outline, color: orange),
+                      Material(
+                        color: Colors.white,
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const CircleAvatar(
+                            backgroundColor: Color(0xFFFFF0E5),
+                            child: Icon(Icons.person_outline, color: orange),
+                          ),
+                          title: Text(
+                            user.name,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: const Text('Mi cuenta'),
+                          onTap: () => select(3),
                         ),
-                        title: Text(
-                          user.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: const Text('Mi cuenta'),
-                        onTap: () => select(3),
                       )
                     else
                       FilledButton(
