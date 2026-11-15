@@ -90,14 +90,27 @@ void main() {
         find.textContaining('crear o gestionar tu tienda'),
         findsOneWidget,
       );
+      await tester.tap(find.widgetWithText(TextButton, 'Crear cuenta'));
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byType(TextFormField),
         'vendedora@utb.edu.ec',
       );
       await tester.tap(find.text('Enviarme el código'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextFormField), '123456');
-      await tester.tap(find.text('Entrar'));
+      await tester.enterText(find.byType(TextFormField).at(0), '123456');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'clave-de-prueba-vendedora',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(2),
+        'clave-de-prueba-vendedora',
+      );
+      await tester.ensureVisible(
+        find.widgetWithText(FilledButton, 'Crear cuenta'),
+      );
+      await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
       await tester.pumpAndSettle();
       expect(find.text('Completa tu perfil'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField), 'Sara Torres');

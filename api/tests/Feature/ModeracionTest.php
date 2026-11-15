@@ -96,6 +96,7 @@ class ModeracionTest extends TestCase
         preg_match('/\b([0-9]{6})\b/', $mensaje, $partes);
         $this->postJson('/api/v1/auth/verificar', [
             'correo' => $admin->correo, 'codigo' => $partes[1], 'dispositivo' => 'Prueba',
+            'contrasena' => 'clave-de-prueba-admin', 'contrasena_confirmation' => 'clave-de-prueba-admin',
         ])->assertUnprocessable();
         $this->post('/admin/acceso/verificar', ['codigo' => $partes[1]])->assertRedirect('/admin/reportes');
         $this->assertAuthenticatedAs($admin, 'administracion');

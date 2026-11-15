@@ -24,7 +24,7 @@ Enviar el enlace del entorno de prueba junto con este texto cuando esté accesib
 
 1. Desde la portada, busca **Café Naranja**, cambia de categoría y alterna entre **Tiendas** y **Productos**. Encuentra un producto disponible y otro agotado.
 2. Busca algo que no exista y vuelve a ver todo el catálogo. Abre el enlace que el equipo te entrega de una tienda dada de baja y regresa a la Vitrina.
-3. Agrega un producto disponible al carrito, cambia la cantidad y continúa. Entra con el código UTB si se te pide. Elige un punto, día, hora y forma de pago. Si el equipo habilitó un pedido ficticio, comprueba el código de confirmación y la opción de abrir WhatsApp.
+3. Agrega un producto disponible al carrito, cambia la cantidad y continúa. Si es tu primera entrada, verifica tu correo UTB y crea tu contraseña de PuntoKampus. Luego puedes iniciar sesión con el correo y la contraseña. Elige un punto, día, hora y forma de pago. Si el equipo habilitó un pedido ficticio, comprueba el código de confirmación y la opción de abrir WhatsApp.
 4. Desde tu propia cuenta UTB, abre **Mi tienda** y crea una tienda marcada como prueba. Localiza dónde publicarías un producto, gestionarías pedidos recibidos y consultarías el estado de Premium.
 5. Encuentra la política de privacidad, la opción para cerrar sesión y la pantalla de borrado. Detente antes de confirmar un borrado.
 

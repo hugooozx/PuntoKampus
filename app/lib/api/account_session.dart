@@ -37,13 +37,27 @@ class AccountSession extends ChangeNotifier {
     }
   }
 
-  Future<void> signIn(String email, String code) async {
+  Future<void> signIn(String email, String password) =>
+      _open('auth/entrar', {'correo': email, 'contrasena': password});
+
+  Future<void> register(
+    String email,
+    String code,
+    String password,
+    String confirmation,
+  ) => _open('auth/verificar', {
+    'correo': email,
+    'codigo': code,
+    'contrasena': password,
+    'contrasena_confirmation': confirmation,
+  });
+
+  Future<void> _open(String path, Json data) async {
     final result = await api.request(
       'POST',
-      'auth/verificar',
+      path,
       data: {
-        'correo': email,
-        'codigo': code,
+        ...data,
         'dispositivo': kIsWeb ? 'Navegador web' : 'Aplicación PuntoKampus',
       },
     );

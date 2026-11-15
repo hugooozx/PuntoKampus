@@ -15,7 +15,7 @@ class Usuario extends Authenticatable implements FilamentUser, HasName
 
     protected $fillable = ['correo', 'nombres', 'acepto_privacidad_en'];
 
-    protected $hidden = ['correo', 'codigo_estudiante', 'facultad', 'carrera', 'semestre', 'whatsapp', 'es_admin', 'acepto_privacidad_en'];
+    protected $hidden = ['correo', 'codigo_estudiante', 'facultad', 'carrera', 'semestre', 'whatsapp', 'es_admin', 'acepto_privacidad_en', 'contrasena_hash'];
 
     protected function casts(): array
     {

@@ -10,7 +10,9 @@ PostgreSQL es el motor vigente según el PRD. El [SQL del tramo 1](puntokampus.s
 
 Mantenemos claves foráneas, comprobaciones de estado, identificadores autogenerados, importes decimales e índices parciales de Premium. Las marcas de tiempo se guardan en UTC. La fecha de fin de Premium se evalúa en `America/Guayaquil`. La búsqueda conserva coincidencias sin tildes o mayúsculas y trata los comodines como texto.
 
-Las rutas, campos y formatos JSON de Laravel se mantienen. Flutter sigue usando la base mediante la API. Los bloqueos de PostgreSQL por correo serializan los envíos y verificaciones de códigos.
+Flutter usa la base mediante la API de Laravel. Los bloqueos de PostgreSQL por correo serializan los envíos y verificaciones de códigos y la apertura de sesiones.
+
+La migración del acceso por contraseña agrega `usuarios.contrasena_hash` a instalaciones nuevas y existentes. Las filas anteriores conservan su correo y su perfil. Consulta el [contrato de acceso](../../docs/acceso-y-cuenta.md) para desplegar Laravel y Flutter juntos.
 
 ## Trasladar desde MySQL v1 en local
 

@@ -15,6 +15,13 @@ class CuentaTest extends TestCase
 {
     use DatabaseTransactions;
 
+    private const CLAVE = '  clave de prueba UTB  ';
+
+    private function claveRegistro(): array
+    {
+        return ['contrasena' => self::CLAVE, 'contrasena_confirmation' => self::CLAVE];
+    }
+
     private function ultimoCodigo(): string
     {
         $mensaje = Mail::mailer('array')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
@@ -32,7 +39,7 @@ class CuentaTest extends TestCase
 
         return $this->postJson('/api/v1/auth/verificar', [
             'correo' => $correo, 'codigo' => $this->ultimoCodigo(), 'dispositivo' => 'Prueba',
-        ])->assertOk()->json('token');
+        ] + $this->claveRegistro())->assertOk()->json('token');
     }
 
     public function test_privacidad_publica_devuelve_la_fecha_configurada(): void
@@ -51,10 +58,14 @@ class CuentaTest extends TestCase
         $this->assertCount(0, Mail::mailer('array')->getSymfonyTransport()->messages());
         $correo = 'Ana@FAFI.utb.edu.ec';
         $token = $this->entrar($correo);
+        $cuenta = Usuario::where('correo', strtolower($correo))->firstOrFail();
+        $this->assertSame('argon2id', password_get_info($cuenta->contrasena_hash)['algoName']);
+        $this->assertTrue(password_verify(self::CLAVE, $cuenta->contrasena_hash));
+        $this->assertArrayNotHasKey('contrasena_hash', $cuenta->toArray());
         $this->assertDatabaseHas('sesiones_acceso', ['token_hash' => hash('sha256', $token)]);
         $this->postJson('/api/v1/auth/verificar', [
             'correo' => $correo, 'codigo' => $this->ultimoCodigo(), 'dispositivo' => 'Prueba',
-        ])->assertUnprocessable();
+        ] + $this->claveRegistro())->assertUnprocessable();
         $this->withToken($token);
         $this->getJson('/api/v1/yo')->assertOk()->assertJsonPath('correo', strtolower($correo))
             ->assertJsonPath('acepto_privacidad_en', null)->assertJsonMissingPath('es_admin');
@@ -65,6 +76,30 @@ class CuentaTest extends TestCase
         $this->assertDatabaseHas('usuarios', ['correo' => strtolower($correo), 'es_admin' => false]);
         $this->postJson('/api/v1/auth/salir')->assertNoContent();
         $this->getJson('/api/v1/yo')->assertUnauthorized();
+
+        $this->postJson('/api/v1/auth/codigo', compact('correo'))->assertNoContent();
+        $this->postJson('/api/v1/auth/entrar', [
+            'correo' => $correo, 'contrasena' => trim(self::CLAVE), 'dispositivo' => 'Otro navegador',
+        ])->assertUnprocessable()->assertJsonPath('message', 'El correo o la contraseña son incorrectos.');
+        $nuevaSesion = $this->postJson('/api/v1/auth/entrar', [
+            'correo' => $correo, 'contrasena' => self::CLAVE, 'dispositivo' => 'Otro navegador',
+        ])->assertOk()->assertJsonPath('es_nuevo', false)->assertJsonMissingPath('usuario.contrasena_hash');
+        $this->assertNotSame($token, $nuevaSesion->json('token'));
+        $this->withToken($nuevaSesion->json('token'))->getJson('/api/v1/yo')->assertOk()->assertJsonPath('nombres', 'Ana María');
+        $this->assertCount(1, Mail::mailer('array')->getSymfonyTransport()->messages());
+    }
+
+    public function test_cuenta_anterior_configura_la_clave_una_vez_sin_cambiar_el_perfil(): void
+    {
+        $cuenta = Usuario::create([
+            'correo' => 'cuenta-anterior@utb.edu.ec', 'nombres' => 'Cuenta anterior',
+            'acepto_privacidad_en' => now(),
+        ]);
+        $this->assertNull($cuenta->contrasena_hash);
+        $token = $this->entrar($cuenta->correo);
+        $this->withToken($token)->getJson('/api/v1/yo')->assertOk()
+            ->assertJsonPath('id', $cuenta->id)->assertJsonPath('nombres', 'Cuenta anterior');
+        $this->assertNotNull($cuenta->fresh()->contrasena_hash);
     }
 
     public function test_limite_de_envios_intentos_y_vencimiento(): void
@@ -76,13 +111,13 @@ class CuentaTest extends TestCase
         $codigo = $correcto === '000000' ? '111111' : '000000';
         $dispositivo = 'Prueba';
         for ($intento = 1; $intento <= 5; $intento++) {
-            $this->postJson('/api/v1/auth/verificar', compact('correo', 'codigo', 'dispositivo'))
+            $this->postJson('/api/v1/auth/verificar', compact('correo', 'codigo', 'dispositivo') + $this->claveRegistro())
                 ->assertStatus($intento === 5 ? 429 : 422);
         }
-        $this->postJson('/api/v1/auth/verificar', ['codigo' => $correcto, 'correo' => $correo, 'dispositivo' => $dispositivo])
+        $this->postJson('/api/v1/auth/verificar', ['codigo' => $correcto, 'correo' => $correo, 'dispositivo' => $dispositivo] + $this->claveRegistro())
             ->assertTooManyRequests();
         $this->travel(10)->minutes();
-        $this->postJson('/api/v1/auth/verificar', ['codigo' => $correcto, 'correo' => $correo, 'dispositivo' => $dispositivo])
+        $this->postJson('/api/v1/auth/verificar', ['codigo' => $correcto, 'correo' => $correo, 'dispositivo' => $dispositivo] + $this->claveRegistro())
             ->assertUnprocessable();
         for ($envio = 2; $envio <= 5; $envio++) {
             $this->postJson('/api/v1/auth/codigo', compact('correo'))->assertNoContent();
@@ -141,7 +176,7 @@ class CuentaTest extends TestCase
     {
         $correo = 'inactiva@utb.edu.ec';
         Usuario::create(compact('correo'))->forceFill(['estado' => 'desactivada'])->save();
-        $this->postJson('/api/v1/auth/codigo', compact('correo'))->assertForbidden();
+        $this->postJson('/api/v1/auth/codigo', compact('correo'))->assertNoContent();
         $this->postJson('/api/v1/cuentas/codigo-borrado', compact('correo'))->assertNoContent();
         $this->deleteJson('/api/v1/cuentas', ['correo' => $correo, 'codigo' => $this->ultimoCodigo()])->assertNoContent();
         $this->assertDatabaseMissing('usuarios', compact('correo'));

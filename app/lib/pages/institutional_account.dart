@@ -76,9 +76,12 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
   final form = GlobalKey<FormState>();
   final email = TextEditingController();
   final code = TextEditingController();
+  final password = TextEditingController();
+  final confirmation = TextEditingController();
   DateTime? resendAt;
   Timer? ticker;
-  bool sent = false, deleted = false;
+  bool sent = false, deleted = false, registering = false;
+  bool get login => !widget.deleting && !registering;
   bool get hasSession => widget.deleting && !widget.publicPage;
   String get address => hasSession
       ? (widget.session.user?['correo'] as String? ?? '')
@@ -93,7 +96,22 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
     ticker?.cancel();
     email.dispose();
     code.dispose();
+    password.dispose();
+    confirmation.dispose();
     super.dispose();
+  }
+
+  void _showRegistration(bool value) {
+    setState(() {
+      registering = value;
+      ticker?.cancel();
+      resendAt = null;
+      sent = false;
+      error = null;
+      code.clear();
+      password.clear();
+      confirmation.clear();
+    });
   }
 
   void cooldown(int seconds) {
@@ -137,7 +155,16 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
     if (!(form.currentState?.validate() ?? false)) return;
     final ok = await run(() async {
       if (!widget.deleting) {
-        await widget.session.signIn(address, code.text);
+        if (login) {
+          await widget.session.signIn(address, password.text);
+        } else {
+          await widget.session.register(
+            address,
+            code.text,
+            password.text,
+            confirmation.text,
+          );
+        }
       } else if (widget.publicPage) {
         final currentEmail = widget.session.user?['correo'];
         await widget.session.api.request(
@@ -154,6 +181,7 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
     if (widget.deleting) {
       setState(() => deleted = true);
     } else {
+      TextInput.finishAutofillContext();
       Navigator.pop(context);
     }
   }
@@ -193,98 +221,161 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
       else
         _AccessHeading(
           icon: sent ? Icons.mail_outline : Icons.school_outlined,
-          title: sent ? 'Revisa tu correo' : 'Entra con tu correo UTB',
+          title: sent
+              ? 'Verifica tu correo UTB'
+              : login
+              ? 'Iniciar sesión'
+              : 'Crear cuenta',
           description: sent
-              ? 'Enviamos un código de 6 dígitos a'
+              ? 'Busca el código de 6 dígitos en'
               : widget.seller
-              ? 'Recibe un código para crear o gestionar tu tienda.'
-              : 'Recibe un código de 6 dígitos para entrar.',
+              ? 'Usa tu correo UTB para crear o gestionar tu tienda.'
+              : login
+              ? 'Ingresa con tu correo institucional y tu contraseña de PuntoKampus.'
+              : 'Verifica tu correo institucional para crear tu cuenta.',
           address: sent ? address : null,
         ),
-      Form(
-        key: form,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (sent)
-              _VerificationCodeField(
-                controller: code,
-                enabled: !busy,
-                onSubmitted: confirm,
-              )
-            else if (!hasSession)
-              _Field(
-                label: 'Correo institucional',
-                controller: email,
-                enabled: !busy,
-                hint: 'tu.nombre@utb.edu.ec',
-                keyboard: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                validator: (value) {
-                  final input = value?.trim() ?? '';
-                  return RegExp(
-                        r'^[^\s@]+@(?:[a-z0-9-]+\.)*utb\.edu\.ec$',
-                        caseSensitive: false,
-                      ).hasMatch(input)
+      AutofillGroup(
+        onDisposeAction: AutofillContextAction.cancel,
+        child: Form(
+          key: form,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (sent)
+                _VerificationCodeField(
+                  controller: code,
+                  enabled: !busy,
+                  onSubmitted: widget.deleting
+                      ? confirm
+                      : () => FocusScope.of(context).nextFocus(),
+                )
+              else if (!hasSession)
+                _Field(
+                  label: 'Correo institucional',
+                  controller: email,
+                  enabled: !busy,
+                  hint: 'tu.nombre@utb.edu.ec',
+                  keyboard: TextInputType.emailAddress,
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email,
+                  ],
+                  validator: (value) {
+                    final input = value?.trim() ?? '';
+                    return RegExp(
+                          r'^[^\s@]+@(?:[a-z0-9-]+\.)*utb\.edu\.ec$',
+                          caseSensitive: false,
+                        ).hasMatch(input)
+                        ? null
+                        : 'Usa un correo de la UTB o de una de sus facultades.';
+                  },
+                  onSubmitted: (_) {
+                    if (login) {
+                      FocusScope.of(context).nextFocus();
+                    } else {
+                      send();
+                    }
+                  },
+                ),
+              if (login || (registering && sent)) ...[
+                const SizedBox(height: 16),
+                _PasswordField(
+                  key: ValueKey(registering),
+                  label: 'Contraseña de PuntoKampus',
+                  controller: password,
+                  enabled: !busy,
+                  newPassword: registering,
+                  validator: (value) {
+                    final length = value?.runes.length ?? 0;
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Escribe tu contraseña.';
+                    }
+                    if (registering && length < 12) {
+                      return 'Usa al menos 12 caracteres.';
+                    }
+                    return length > 128 ? 'Usa hasta 128 caracteres.' : null;
+                  },
+                  onSubmitted: login ? (_) => confirm() : null,
+                ),
+              ],
+              if (registering && sent) ...[
+                const SizedBox(height: 12),
+                _PasswordField(
+                  label: 'Confirmar contraseña',
+                  controller: confirmation,
+                  enabled: !busy,
+                  newPassword: true,
+                  validator: (value) => value == password.text
                       ? null
-                      : 'Usa un correo de la UTB o de una de sus facultades.';
-                },
-                onSubmitted: (_) => send(),
-              ),
-            if (error != null) _Feedback(error!, isError: true),
-            const SizedBox(height: 16),
-            FilledButton(
-              style: widget.deleting && sent
-                  ? FilledButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                    )
-                  : null,
-              onPressed: busy || (!sent && seconds > 0)
-                  ? null
-                  : sent
-                  ? confirm
-                  : send,
-              child: Text(
-                busy
-                    ? sent
-                          ? 'Verificando código…'
-                          : 'Solicitando código…'
-                    : sent
-                    ? (widget.deleting
-                          ? 'Borrar mi cuenta para siempre'
-                          : 'Entrar')
-                    : seconds > 0
-                    ? 'Espera $seconds s'
-                    : widget.deleting
-                    ? 'Enviarme el código de confirmación'
-                    : 'Enviarme el código',
-              ),
-            ),
-            if (sent) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: busy || seconds > 0 ? null : send,
+                      : 'Las contraseñas no coinciden.',
+                  onSubmitted: (_) => confirm(),
+                ),
+              ],
+              if (error != null) _Feedback(error!, isError: true),
+              const SizedBox(height: 16),
+              FilledButton(
+                style: widget.deleting && sent
+                    ? FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                      )
+                    : null,
+                onPressed: busy || (!sent && seconds > 0)
+                    ? null
+                    : login || sent
+                    ? confirm
+                    : send,
                 child: Text(
-                  seconds > 0 ? 'Reenviar en $seconds s' : 'Reenviar código',
+                  busy
+                      ? login
+                            ? 'Iniciando sesión…'
+                            : sent
+                            ? 'Verificando código…'
+                            : 'Solicitando código…'
+                      : login
+                      ? 'Iniciar sesión'
+                      : sent
+                      ? (widget.deleting
+                            ? 'Borrar mi cuenta para siempre'
+                            : 'Crear cuenta')
+                      : seconds > 0
+                      ? 'Espera $seconds s'
+                      : widget.deleting
+                      ? 'Enviarme el código de confirmación'
+                      : 'Enviarme el código',
                 ),
               ),
-              if (!hasSession)
+              if (sent) ...[
+                const SizedBox(height: 8),
                 TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => setState(() {
-                          ticker?.cancel();
-                          resendAt = null;
-                          sent = false;
-                          error = null;
-                          code.clear();
-                        }),
-                  child: const Text('Cambiar correo'),
+                  onPressed: busy || seconds > 0 ? null : send,
+                  child: Text(
+                    seconds > 0 ? 'Reenviar en $seconds s' : 'Reenviar código',
+                  ),
                 ),
+                if (!hasSession)
+                  TextButton(
+                    onPressed: busy
+                        ? null
+                        : () => _showRegistration(registering),
+                    child: const Text('Cambiar correo'),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
+      if (!widget.deleting)
+        TextButton(
+          onPressed: busy ? null : () => _showRegistration(!registering),
+          child: Text(login ? 'Crear cuenta' : 'Ya tengo cuenta'),
+        ),
+      if (registering && !sent)
+        const Text(
+          'Si ya usabas PuntoKampus con código, usa el mismo correo para crear tu contraseña.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: muted, fontSize: 14),
+        ),
       if (!widget.deleting && widget.browseOnExit)
         TextButton(
           onPressed: busy
@@ -616,7 +707,7 @@ class _PrivacyPageState extends State<PrivacyPage> {
           ),
           const _PrivacySection(
             'Qué datos guardamos',
-            'Guardamos tu correo institucional y tus nombres. Si creas una tienda, también guardamos tu código de estudiante, carrera, semestre y número de WhatsApp. Registramos tus pedidos y los reportes que envías. Si solicitas Premium, guardamos la foto del comprobante, el número y el monto del pago.',
+            'Guardamos tu correo institucional, tus nombres y un hash de tu contraseña de PuntoKampus. Si creas una tienda, también guardamos tu código de estudiante, carrera, semestre y número de WhatsApp. Registramos tus pedidos y los reportes que envías. Si solicitas Premium, guardamos la foto del comprobante, el número y el monto del pago.',
           ),
           const _PrivacySection(
             'Para qué los usamos',
@@ -894,6 +985,52 @@ class _VerificationCodeFieldState extends State<_VerificationCodeField> {
   }
 }
 
+class _PasswordField extends StatefulWidget {
+  const _PasswordField({
+    super.key,
+    required this.label,
+    required this.controller,
+    required this.enabled,
+    required this.newPassword,
+    this.validator,
+    this.onSubmitted,
+  });
+  final String label;
+  final TextEditingController controller;
+  final bool enabled, newPassword;
+  final FormFieldValidator<String>? validator;
+  final ValueChanged<String>? onSubmitted;
+
+  @override
+  State<_PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<_PasswordField> {
+  bool visible = false;
+
+  @override
+  Widget build(BuildContext context) => _Field(
+    label: widget.label,
+    controller: widget.controller,
+    enabled: widget.enabled,
+    obscureText: !visible,
+    validator: widget.validator,
+    onSubmitted: widget.onSubmitted,
+    autofillHints: [
+      widget.newPassword ? AutofillHints.newPassword : AutofillHints.password,
+    ],
+    suffixIcon: IconButton(
+      tooltip: visible ? 'Ocultar contraseña' : 'Mostrar contraseña',
+      onPressed: widget.enabled
+          ? () => setState(() => visible = !visible)
+          : null,
+      icon: Icon(
+        visible ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+      ),
+    ),
+  );
+}
+
 class _Field extends StatelessWidget {
   const _Field({
     required this.label,
@@ -905,6 +1042,8 @@ class _Field extends StatelessWidget {
     this.validator,
     this.onSubmitted,
     this.autofillHints,
+    this.obscureText = false,
+    this.suffixIcon,
   });
   final String label;
   final TextEditingController controller;
@@ -915,6 +1054,8 @@ class _Field extends StatelessWidget {
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onSubmitted;
   final Iterable<String>? autofillHints;
+  final bool obscureText;
+  final Widget? suffixIcon;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -926,7 +1067,8 @@ class _Field extends StatelessWidget {
         child: TextFormField(
           controller: controller,
           enabled: enabled,
-          decoration: InputDecoration(hintText: hint),
+          obscureText: obscureText,
+          decoration: InputDecoration(hintText: hint, suffixIcon: suffixIcon),
           keyboardType: keyboard,
           inputFormatters: formatters,
           validator: validator,

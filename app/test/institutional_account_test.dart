@@ -31,7 +31,7 @@ void main() {
         requests.add(request);
         return switch (request.url.pathSegments.last) {
           'codigo' || 'salir' => http.Response('', 204),
-          'verificar' => jsonResponse({
+          'verificar' || 'entrar' => jsonResponse({
             'token': 'token-de-prueba',
             'usuario': user,
             'es_nuevo': true,
@@ -58,16 +58,32 @@ void main() {
     expect(find.text('Cuenta'), findsNothing);
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, 'Crear cuenta'));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField), 'ana@fafi.utb.edu.ec');
     await tester.tap(find.text('Enviarme el código'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Reenviar en'), findsOneWidget);
     expect(find.text('ana@fafi.utb.edu.ec'), findsOneWidget);
-    await tester.tap(find.text('Entrar').last);
+    await tester.ensureVisible(
+      find.widgetWithText(FilledButton, 'Crear cuenta'),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
     await tester.pumpAndSettle();
     expect(find.text('Escribe los 6 dígitos.'), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField), '01a234567');
-    await tester.tap(find.text('Entrar').last);
+    await tester.enterText(find.byType(TextFormField).at(0), '01a234567');
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'clave-de-prueba-utb',
+    );
+    await tester.enterText(
+      find.byType(TextFormField).at(2),
+      'clave-de-prueba-utb',
+    );
+    await tester.ensureVisible(
+      find.widgetWithText(FilledButton, 'Crear cuenta'),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Crear cuenta'));
     await tester.pumpAndSettle();
     final verification = requests.singleWhere(
       (request) => request.url.path.endsWith('/auth/verificar'),
@@ -103,6 +119,30 @@ void main() {
     await tester.pumpAndSettle();
     expect(requests.last.url.path, '/api/v1/auth/salir');
     expect(find.text('Entrar'), findsOneWidget);
+    final sent = requests
+        .where((request) => request.url.path.endsWith('/auth/codigo'))
+        .length;
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'ana@fafi.utb.edu.ec',
+    );
+    await tester.enterText(
+      find.byType(TextFormField).at(1),
+      'clave-de-prueba-utb',
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Iniciar sesión'));
+    await tester.pumpAndSettle();
+    final login = requests.singleWhere(
+      (request) => request.url.path.endsWith('/auth/entrar'),
+    );
+    expect(jsonDecode(login.body)['contrasena'], 'clave-de-prueba-utb');
+    expect(
+      requests.where((request) => request.url.path.endsWith('/auth/codigo')),
+      hasLength(sent),
+    );
+    expect(find.text('Vitrina'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -129,6 +169,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(TextButton, 'Crear cuenta'));
+    await tester.tap(find.widgetWithText(TextButton, 'Crear cuenta'));
+    await tester.pumpAndSettle();
     await tester.enterText(
       find.byType(TextFormField),
       'estudiante@fafi.utb.edu.ec',
@@ -136,9 +179,9 @@ void main() {
     await tester.ensureVisible(find.text('Enviarme el código'));
     await tester.tap(find.text('Enviarme el código'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField), '012345');
+    await tester.enterText(find.byType(TextFormField).first, '012345');
     await tester.pumpAndSettle();
-    expect(find.text('Revisa tu correo'), findsOneWidget);
+    expect(find.text('Verifica tu correo UTB'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

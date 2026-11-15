@@ -8,6 +8,7 @@ use App\Support\AccesoInstitucional;
 use App\Support\BorradoCuenta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class CuentaController extends Controller
@@ -36,8 +37,10 @@ class CuentaController extends Controller
     {
         $correo = $this->correo($request);
         $this->acceso->porCorreo($correo, function () use ($correo) {
-            abort_if(Usuario::where('correo', $correo)->where('estado', 'desactivada')->exists(), 403, 'Esta cuenta está desactivada.');
-            $this->acceso->enviar($correo, 'acceso');
+            $usuario = Usuario::where('correo', $correo)->first();
+            if (! $usuario || ($usuario->estado === 'activa' && $usuario->contrasena_hash === null)) {
+                $this->acceso->enviar($correo, 'acceso');
+            }
         });
 
         return response()->noContent();
@@ -47,27 +50,72 @@ class CuentaController extends Controller
     {
         $correo = $this->correo($request);
         $codigo = $this->codigo($request);
-        $dispositivo = $request->validate(['dispositivo' => ['required', 'string', 'max:120']])['dispositivo'];
-        $resultado = $this->acceso->porCorreo($correo, function () use ($correo, $codigo, $dispositivo) {
+        $datos = $request->validate([
+            'dispositivo' => ['required', 'string', 'max:120'],
+            'contrasena' => ['required', 'string', 'min:12', 'max:128', 'confirmed'],
+        ], [
+            'contrasena.required' => 'Elige una contraseña para PuntoKampus.',
+            'contrasena.min' => 'Usa al menos 12 caracteres.',
+            'contrasena.max' => 'Usa hasta 128 caracteres.',
+            'contrasena.confirmed' => 'Las contraseñas no coinciden.',
+        ]);
+        $resultado = $this->acceso->porCorreo($correo, function () use ($correo, $codigo, $datos) {
+            $previo = Usuario::where('correo', $correo)->first();
+            abort_if($previo && ($previo->estado !== 'activa' || $previo->contrasena_hash !== null),
+                422, 'No pudimos verificar el registro. Si ya tienes cuenta, inicia sesión.');
             $id = $this->acceso->verificar($correo, 'acceso', $codigo);
 
-            return DB::transaction(function () use ($id, $correo, $dispositivo) {
+            return DB::transaction(function () use ($id, $correo, $datos) {
                 $usuario = Usuario::firstOrCreate(['correo' => $correo]);
                 abort_unless($usuario->estado === null || $usuario->estado === 'activa', 403, 'Esta cuenta está desactivada.');
-                $token = bin2hex(random_bytes(32));
-                DB::table('sesiones_acceso')->insert([
-                    'usuario_id' => $usuario->id,
-                    'nombre_dispositivo' => $dispositivo,
-                    'token_hash' => hash('sha256', $token),
-                    'expira_en' => $this->acceso->vencimientoSesion(),
-                ]);
+                $nueva = $usuario->wasRecentlyCreated;
+                $usuario->forceFill(['contrasena_hash' => Hash::driver('argon2id')->make($datos['contrasena'])])->save();
                 DB::table('codigos_acceso')->where('id', $id)->update(['usado_en' => now()]);
 
-                return ['token' => $token, 'usuario' => $this->datos($usuario), 'es_nuevo' => $usuario->wasRecentlyCreated];
+                return $this->abrirSesion($usuario, $datos['dispositivo'], $nueva);
             });
         });
 
         return response()->json($resultado)->header('Cache-Control', 'no-store');
+    }
+
+    public function entrar(Request $request)
+    {
+        $correo = $this->correo($request);
+        $datos = $request->validate([
+            'dispositivo' => ['required', 'string', 'max:120'],
+            'contrasena' => ['required', 'string', 'max:128'],
+        ]);
+        $resultado = $this->acceso->porCorreo($correo, function () use ($correo, $datos) {
+            $usuario = Usuario::where('correo', $correo)->first();
+            $hash = Hash::driver('argon2id');
+            $valida = false;
+            if ($usuario?->contrasena_hash === null) {
+                // Mantiene un costo comparable cuando no hay credencial.
+                $hash->make($datos['contrasena']);
+            } else {
+                $valida = $hash->check($datos['contrasena'], $usuario->contrasena_hash);
+            }
+            abort_unless($valida && $usuario->estado === 'activa', 422,
+                'El correo o la contraseña son incorrectos.');
+
+            return $this->abrirSesion($usuario, $datos['dispositivo']);
+        });
+
+        return response()->json($resultado)->header('Cache-Control', 'no-store');
+    }
+
+    private function abrirSesion(Usuario $usuario, string $dispositivo, bool $nueva = false): array
+    {
+        $token = bin2hex(random_bytes(32));
+        DB::table('sesiones_acceso')->insert([
+            'usuario_id' => $usuario->id,
+            'nombre_dispositivo' => $dispositivo,
+            'token_hash' => hash('sha256', $token),
+            'expira_en' => $this->acceso->vencimientoSesion(),
+        ]);
+
+        return ['token' => $token, 'usuario' => $this->datos($usuario), 'es_nuevo' => $nueva];
     }
 
     public function salir(Request $request)

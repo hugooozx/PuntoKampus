@@ -27,8 +27,10 @@ class EsquemaPostgresqlTest extends TestCase
         (require database_path('migrations/2026_11_14_020000_agregar_idempotencia_pedidos.php'))->up();
         $inventario->up();
         (require database_path('migrations/2026_11_16_000000_agregar_codigo_administracion.php'))->up();
+        (require database_path('migrations/2026_11_17_000000_agregar_contrasena_a_usuarios.php'))->up();
         $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
         $this->assertCount(22, $tables); // 20 de dominio, migraciones y reintentos de archivos.
+        $this->assertTrue(DB::getSchemaBuilder()->hasColumn('usuarios', 'contrasena_hash'));
         $this->assertDatabaseCount('usuarios', 0);
         $this->assertDatabaseCount('tiendas', 0);
     }

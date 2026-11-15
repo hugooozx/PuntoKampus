@@ -24,6 +24,7 @@ class MiTiendaTest extends TestCase
         preg_match('/\b([0-9]{6})\b/', $correoEnviado->getTextBody(), $codigo);
         $token = $this->postJson('/api/v1/auth/verificar', [
             'correo' => $correo, 'codigo' => $codigo[1], 'dispositivo' => 'Prueba tienda',
+            'contrasena' => 'clave-de-prueba-tienda', 'contrasena_confirmation' => 'clave-de-prueba-tienda',
         ])->assertOk()->json('token');
         $this->withToken($token)->postJson('/api/v1/mi-tienda', $datos)->assertForbidden();
         $this->putJson('/api/v1/yo', ['nombres' => 'Vendedora de prueba', 'acepto_privacidad' => true])->assertOk();

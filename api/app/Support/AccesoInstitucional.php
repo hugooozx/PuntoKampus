@@ -70,7 +70,7 @@ class AccesoInstitucional
             [$accion, $asunto] = match ($proposito) {
                 'administracion' => ['entrar al panel de PuntoKampus', 'Tu código para el panel de PuntoKampus'],
                 'eliminar_cuenta' => ['confirmar el borrado de tu cuenta', 'Confirma el borrado de tu cuenta PuntoKampus'],
-                default => ['entrar en PuntoKampus', 'Tu código de acceso a PuntoKampus'],
+                default => ['verificar tu correo UTB', 'Confirma tu correo UTB para PuntoKampus'],
             };
             Mail::send(
                 ['html' => 'correos.codigo', 'text' => 'correos.codigo-texto'],
