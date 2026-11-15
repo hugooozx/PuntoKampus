@@ -4,6 +4,94 @@ Vitrina digital de emprendimientos de estudiantes de la Universidad Técnica de 
 
 El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **PostgreSQL para los datos** y **Filament para administración**. Ambos desarrolladores trabajan en todo el stack y se reparten funcionalidades.
 
+## Primera instalación local en Windows
+
+Necesitas Git, Python 3, Flutter 3.50 o superior, PHP 8.4 con `pdo_pgsql` y GD con WebP, Composer y PostgreSQL 16 o superior con ICU y la extensión `unaccent` disponible. Usa `flutter doctor` para comprobar la instalación de Flutter. Para este recorrido web basta con un navegador.
+
+### 1. Clonar la versión de revisión
+
+Con acceso al repositorio, ejecuta en PowerShell los comandos siguientes. La rama `codex/recuperar-contrasena` contiene la versión que usamos para verificar el recorrido local.
+
+```powershell
+git clone --branch codex/recuperar-contrasena https://github.com/hugooozx/PuntoKampus.git
+Set-Location PuntoKampus
+```
+
+### 2. Configurar PostgreSQL y Laravel
+
+En tu instancia local de PostgreSQL, crea una base UTF-8 llamada `puntokampus` y un usuario `puntokampus` que sea su propietario. Si usas `psql`, entra como administrador de PostgreSQL con `psql -h 127.0.0.1 -U postgres -d postgres` y ejecuta esto una vez. `\password` te pedirá la contraseña del nuevo usuario.
+
+```sql
+CREATE ROLE puntokampus LOGIN;
+\password puntokampus
+CREATE DATABASE puntokampus OWNER puntokampus TEMPLATE template0 ENCODING 'UTF8';
+\q
+```
+
+Desde la raíz del repositorio, entra a `api/` y crea tu configuración local.
+
+```powershell
+Set-Location api
+Copy-Item .env.example .env
+```
+
+Abre `api/.env` en VS Code. Conserva `APP_ENV=local`, `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1` y `MAIL_MAILER=log`. En `DB_PORT` usa el puerto de tu PostgreSQL, normalmente `5432`. Configura `DB_DATABASE=puntokampus`, `DB_USERNAME=puntokampus` y tu contraseña en `DB_PASSWORD`. Usa `APP_URL=http://127.0.0.1:8000`. El `.env` se queda en tu computadora.
+
+En la misma terminal, instala Laravel, genera la clave, aplica las migraciones y carga los catálogos de la UTB, las categorías y los puntos de entrega.
+
+```powershell
+composer install
+php artisan key:generate
+php artisan migrate
+php artisan db:seed --class=CatalogoAcademicoUtbSeeder
+php artisan db:seed --class=CatalogosInicialesSeeder
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+Deja abierta la terminal. Puedes comprobar la API en [categorías locales](http://127.0.0.1:8000/api/v1/categorias).
+
+### 3. Abrir la web
+
+En otra terminal, desde la raíz del repositorio, compila y sirve la aplicación.
+
+```powershell
+Set-Location app
+flutter pub get
+flutter build web --no-web-resources-cdn
+Set-Location ..
+python scripts/abrir_demo.py
+```
+
+Deja abierta esa terminal y entra a [PuntoKampus](http://127.0.0.1:8766/). En Windows puedes usar `py` si tu instalación registra Python con ese nombre. Después del primer arranque, para volver a abrir la app basta con mantener PostgreSQL activo, iniciar Laravel y ejecutar de nuevo el servidor web de Python. Vuelve a compilar Flutter cuando cambie la app y ejecuta `php artisan migrate` cuando lleguen migraciones nuevas.
+
+### 4. Crear tus cuentas de prueba
+
+Las cuentas, tiendas y pedidos de otra computadora pertenecen a su base local. Crea tus cuentas con correos ficticios distintos, como los de la tabla, y elige tus propias contraseñas.
+
+| Rol | Pestaña | Correo de ejemplo |
+| --- | --- | --- |
+| Comprador | [Vitrina en 127.0.0.1](http://127.0.0.1:8766/) | `pk-prueba-comprador@utb.edu.ec` |
+| Vendedor | [Vitrina en localhost](http://localhost:8766/) | `pk-prueba-vendedor@utb.edu.ec` |
+| Administrador | [Panel Filament](http://127.0.0.1:8000/admin/login) | `pk-prueba-admin@utb.edu.ec` |
+
+1. **Comprador y vendedor.** En cada pestaña pulsa **Entrar → Crear cuenta**. Solicita el código y abre `api/storage/logs/laravel.log` en VS Code. Busca desde el final la entrada más reciente para ese correo. Copia los seis dígitos, elige una contraseña de al menos 12 caracteres y completa el perfil y el consentimiento. Usa **Iniciar sesión** con esa contraseña a partir de entonces. Las dos direcciones de la tabla mantienen sesiones distintas en el mismo navegador. También puedes usar una ventana privada para una de las dos cuentas.
+2. **Administrador.** Crea una tercera cuenta ficticia con el mismo flujo en una ventana privada o un perfil separado para conservar las otras dos sesiones. Abre una terminal adicional en `api/` y ejecuta `php artisan tinker`. Ya dentro de Tinker, pega esta línea sobre tu base de desarrollo local y luego escribe `exit`.
+
+   ```php
+   \App\Models\Usuario::where('correo', 'pk-prueba-admin@utb.edu.ec')->firstOrFail()->forceFill(['es_admin' => true])->save();
+   ```
+
+   En Filament solicita el código de administración para esa cuenta y usa el mensaje más reciente del registro de Laravel. Si acabas de pedir el código de registro, espera un minuto antes de pedir el del panel. Filament usa su propia sesión.
+
+### 5. Probar el recorrido con las tres pestañas
+
+1. Como **vendedor**, abre **Mi tienda** y crea `Tienda de prueba PK`. Usa un código de estudiante ficticio, elige una carrera, un semestre, una categoría y **Biblioteca** como punto de entrega. Usa `0900000000` como WhatsApp ficticio. Ve a **Mis productos → Nuevo producto** y publica un `Brownie de prueba` por `$2,50`.
+2. Como **comprador**, busca la tienda o el brownie en la Vitrina, agrégalo al carrito y elige Biblioteca, un día, una hora válida y **Efectivo**. Guarda el pedido. Si se abre WhatsApp, cierra esa pestaña para evitar contactar al número de prueba. Revisa el pedido en **Mis pedidos**.
+3. Como **vendedor**, entra a **Mi tienda → Pedidos de mi tienda** y marca el pedido como **Entregado**. Vuelve a **Mis pedidos** con la cuenta compradora y comprueba el estado.
+4. Desde la tienda pública y con la cuenta **compradora**, pulsa **Reportar** y elige un motivo de prueba. Abre **Reportes** en Filament y confirma que aparece.
+
+Si el registro local no muestra el código, verifica `MAIL_MAILER=log` en `api/.env`, ejecuta `php artisan config:clear` desde `api/` y reinicia Laravel. Si la tienda no se puede crear por falta de opciones, comprueba que ambos comandos de carga de catálogos se ejecutaron sobre la misma base configurada en Laravel.
+
 ## Estado de este incremento
 
 Laravel consulta PostgreSQL. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
@@ -28,13 +116,9 @@ PostgreSQL es el motor del PRD. El [SQL completo](database/postgresql/puntokampu
 | `docs/primeras-tareas.md` | Incrementos y propuesta de reparto del trabajo |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Plantilla de revisión de cambios |
 
-## Ejecutar Flutter
+## Desarrollo con Flutter
 
-En esta computadora, abre `Abrir PuntoKampus.cmd` para iniciar PostgreSQL, la API y la compilación web de Flutter. Se necesita Python 3 y la ventana del servidor debe quedar abierta mientras pruebas. Configuración y alcance en [Flutter conectado a la API](docs/flutter-vitrina-api.md).
-
-Para compilar desde el código se necesita Flutter 3.50 o posterior. Para Android también se requiere Android SDK y un emulador o un dispositivo.
-
-Desde la raíz:
+Para editar Flutter con recarga rápida, mantén Laravel activo y ejecuta desde la raíz del repositorio los comandos siguientes. Para Android también se requiere Android SDK y un emulador o un dispositivo.
 
 ```powershell
 cd app
@@ -42,28 +126,18 @@ flutter pub get
 flutter run -d chrome
 ```
 
-Para producir los archivos web:
-
-```powershell
-flutter build web --no-web-resources-cdn
-cd ..
-python scripts/abrir_demo.py
-```
-
-Para validar el código:
+Para validar el código desde `app/` ejecuta estos comandos.
 
 ```powershell
 flutter analyze
 flutter test
 ```
 
-En la instalación portátil de esta computadora, usa `../.tools/flutter/bin/flutter.bat` en lugar de `flutter` cuando estés dentro de `app/`.
+Consulta también [Flutter conectado a la API](docs/flutter-vitrina-api.md). La maqueta de referencia se ejecuta con `flutter run -t lib/main_demo.dart`.
 
-Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base parte vacía. Pulsa «Entrar» para solicitar un código y completar tu perfil. Después, abre Mi tienda para publicar tu emprendimiento con los catálogos cargados. La demo antigua se ejecuta con `flutter run -t lib/main_demo.dart`.
+## Atajos de la instalación portátil en Windows
 
-## Ejecutar la API
-
-En esta computadora, abre `Iniciar API.cmd`. La API se sirve en `http://127.0.0.1:8000` y PostgreSQL en `127.0.0.1:5433`. Las bases de desarrollo y pruebas están separadas. Consulta la configuración en [api/README.md](api/README.md).
+Si ya tienes las herramientas portátiles en `.tools/`, usa `Abrir PuntoKampus.cmd` para servir la compilación web y arrancar la API y PostgreSQL. `Iniciar API.cmd` sirve solo la API con PostgreSQL en el puerto `5433`. Para ejecutar Flutter desde `app/`, puedes usar `../.tools/flutter/bin/flutter.bat`. Los binarios de `.tools/` se preparan por separado en cada computadora. Consulta la configuración en [api/README.md](api/README.md).
 
 Los archivos `.env` son locales. Cada desarrollador crea el suyo a partir del ejemplo y configura sus propios servicios. Nunca se comparten credenciales, claves privadas ni comprobantes reales mediante Git.
 
