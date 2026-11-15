@@ -62,16 +62,30 @@ void main() {
     await tester.tap(find.text('Enviarme el código'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Reenviar en'), findsOneWidget);
-    await tester.enterText(find.byType(TextFormField), '012345');
+    expect(find.text('ana@fafi.utb.edu.ec'), findsOneWidget);
     await tester.tap(find.text('Entrar').last);
     await tester.pumpAndSettle();
+    expect(find.text('Escribe los 6 dígitos.'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), '01a234567');
+    await tester.tap(find.text('Entrar').last);
+    await tester.pumpAndSettle();
+    final verification = requests.singleWhere(
+      (request) => request.url.path.endsWith('/auth/verificar'),
+    );
+    expect(jsonDecode(verification.body)['codigo'], '012345');
     expect(find.text('Completa tu perfil'), findsOneWidget);
     await tester.enterText(find.byType(TextFormField), 'Ana');
-    await tester.tap(find.text('Continuar'));
-    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilledButton>(find.widgetWithText(FilledButton, 'Continuar'))
+          .onPressed,
+      isNull,
+    );
     expect(find.text('Acepta la política para continuar.'), findsOneWidget);
     expect(requests.where((r) => r.method == 'PUT'), isEmpty);
     await tester.tap(find.byType(CheckboxListTile));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Continuar'));
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
     expect(find.text('Vitrina'), findsWidgets);
@@ -89,6 +103,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(requests.last.url.path, '/api/v1/auth/salir');
     expect(find.text('Entrar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Acceso con código cabe a 320 px con el texto ampliado', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 780);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    final api = CatalogApi(
+      client: MockClient(
+        (request) async => request.url.path.endsWith('/codigo')
+            ? http.Response('', 204)
+            : jsonResponse({
+                'data': [],
+                'meta': {'total': 0, 'current_page': 1, 'last_page': 1},
+              }),
+      ),
+    );
+    await tester.pumpWidget(PuntoKampusRealApp(api: api));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField),
+      'estudiante@fafi.utb.edu.ec',
+    );
+    await tester.ensureVisible(find.text('Enviarme el código'));
+    await tester.tap(find.text('Enviarme el código'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), '012345');
+    await tester.pumpAndSettle();
+    expect(find.text('Revisa tu correo'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

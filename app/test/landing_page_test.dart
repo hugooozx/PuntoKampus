@@ -102,6 +102,8 @@ void main() {
       expect(find.text('Completa tu perfil'), findsOneWidget);
       await tester.enterText(find.byType(TextFormField), 'Sara Torres');
       await tester.tap(find.byType(CheckboxListTile));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Continuar'));
       await tester.tap(find.text('Continuar'));
       await tester.pumpAndSettle();
       expect(find.text('Crear mi tienda'), findsOneWidget);

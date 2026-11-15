@@ -6,7 +6,7 @@ La portada web está en `/`. **Explorar la Vitrina** abre `/vitrina` sin sesión
 
 1. Abre `Abrir PuntoKampus.cmd` y entra en `http://127.0.0.1:8766`. Si ya tienes abierta la Vitrina, recarga con Ctrl + F5.
 2. Pide el código con un correo ficticio, por ejemplo `prueba@fafi.utb.edu.ec`. Con la configuración local `MAIL_MAILER=log`, el correo de prueba queda en `api/storage/logs/laravel.log`. Busca la entrada más reciente para ese correo y copia sus seis dígitos. No uses datos personales en el modo de registro.
-3. Completa los nombres, abre la política y acepta la casilla para entrar. En Cuenta prueba guardar otro nombre y recargar la página para comprobar la sesión.
+3. Escribe o pega los seis dígitos en el campo de código. Si es tu primera entrada, completa los nombres y acepta la política de privacidad para habilitar **Continuar**. En Cuenta prueba guardar otro nombre y recargar la página para comprobar la sesión.
 4. Usa **Cerrar sesión** desde Cuenta o el menú de perfil de escritorio. Revoca la sesión, vacía el carrito y vuelve a la portada web. Para eliminar el perfil de prueba, vuelve a entrar, abre «Borrar mi cuenta» y solicita un código de confirmación. El límite de 60 segundos es por correo y abarca ambos tipos de código.
 5. También puedes abrir directamente `http://127.0.0.1:8766/privacidad` y `http://127.0.0.1:8766/borrar-cuenta`. La segunda ruta permite borrar mediante correo y código incluso con una cuenta desactivada.
 
