@@ -147,7 +147,11 @@ class _RealShellState extends State<RealShell> {
       index: selected,
       children: [
         RealCatalog(controller: controller),
-        BuyerOrders(key: ValueKey(session.user?['id']), visible: selected == 1),
+        BuyerOrders(
+          key: ValueKey(session.user?['id']),
+          visible: selected == 1,
+          onChanged: () => controller.refresh(),
+        ),
         if (signedIn)
           MyShopPage(
             key: ValueKey(session.user!['id']),

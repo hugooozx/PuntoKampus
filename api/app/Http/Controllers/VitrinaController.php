@@ -61,7 +61,7 @@ class VitrinaController extends Controller
 
     public function tienda(string $slug)
     {
-        return new TiendaResource(Tienda::activas()->where('slug', $slug)->with(['productos' => fn ($q) => $q->orderBy('id'), 'productos.fotos'])->firstOrFail());
+        return new TiendaResource(Tienda::activas()->where('slug', $slug)->with(['productos' => fn ($q) => $q->conReservas()->orderBy('id'), 'productos.fotos'])->firstOrFail());
     }
 
     public function productos(BuscarVitrinaRequest $request)
@@ -69,7 +69,7 @@ class VitrinaController extends Controller
         $query = Producto::whereHas('tienda', function (Builder $q) use ($request) {
             $q->activas();
             $this->categoria($q, $request);
-        })->with(['fotos', 'tienda']);
+        })->conReservas()->with(['fotos', 'tienda']);
         $term = trim($request->string('buscar')->toString());
         if ($term !== '') {
             $query->where(function (Builder $q) use ($term) {

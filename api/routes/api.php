@@ -32,6 +32,10 @@ Route::prefix('v1')->group(function () {
     Route::middleware(SesionInstitucional::class)->group(function () {
         Route::post('pedidos', [PedidoController::class, 'crear']);
         Route::get('pedidos', [PedidoController::class, 'indice']);
+        Route::post('pedidos/{id}/cancelar', [PedidoController::class, 'cancelarCompra'])->whereNumber('id');
+        Route::get('mi-tienda/pedidos', [PedidoController::class, 'recibidos']);
+        Route::post('mi-tienda/pedidos/{id}/entregado', [PedidoController::class, 'entregar'])->whereNumber('id');
+        Route::post('mi-tienda/pedidos/{id}/cancelar', [PedidoController::class, 'cancelarVenta'])->whereNumber('id');
         Route::get('mi-tienda', [MiTiendaController::class, 'ver']);
         Route::post('mi-tienda', [MiTiendaController::class, 'crear']);
         Route::put('mi-tienda', [MiTiendaController::class, 'actualizar']);
@@ -42,6 +46,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/', [MisProductosController::class, 'crear']);
             Route::put('{producto}', [MisProductosController::class, 'actualizar'])->whereNumber('producto');
             Route::delete('{producto}', [MisProductosController::class, 'borrar'])->whereNumber('producto');
+            Route::post('{producto}/inventario', [MisProductosController::class, 'inventario'])->whereNumber('producto');
             Route::post('{producto}/fotos', [MisProductosController::class, 'agregarFoto'])->whereNumber('producto');
             Route::delete('{producto}/fotos/{foto}', [MisProductosController::class, 'quitarFoto'])->whereNumber(['producto', 'foto']);
         });

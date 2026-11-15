@@ -25,9 +25,9 @@ def main():
         raise SystemExit('Primero compila Flutter web; consulta app/README.md.')
     subprocess.run([sys.executable, str(ROOT / 'scripts/postgresql_local.py'), 'iniciar'], check=True, cwd=ROOT)
     subprocess.run([str(PHP), 'artisan', 'migrate', '--force'], check=True, cwd=ROOT / 'api', creationflags=FLAGS)
+    log_dir = ROOT / '.local/api'
+    log_dir.mkdir(parents=True, exist_ok=True)
     if not api_ready():
-        log_dir = ROOT / '.local/api'
-        log_dir.mkdir(parents=True, exist_ok=True)
         with (log_dir / 'lanzador.log').open('ab') as log:
             process = subprocess.Popen([str(PHP), 'artisan', 'serve', '--host=127.0.0.1', '--port=8000'],
                 cwd=ROOT / 'api', stdout=log, stderr=log, creationflags=FLAGS)
@@ -40,7 +40,16 @@ def main():
         else:
             process.terminate()
             raise SystemExit('La API no respondio a tiempo.')
-    subprocess.run([sys.executable, str(ROOT / 'scripts/abrir_demo.py')], cwd=ROOT, check=True)
+    with (log_dir / 'programador.log').open('ab') as log:
+        scheduler = subprocess.Popen(
+            [str(PHP), 'artisan', 'schedule:work'],
+            cwd=ROOT / 'api', stdout=log, stderr=log, creationflags=FLAGS,
+        )
+        try:
+            subprocess.run([sys.executable, str(ROOT / 'scripts/abrir_demo.py')], cwd=ROOT, check=True)
+        finally:
+            scheduler.terminate()
+            scheduler.wait()
 
 
 if __name__ == '__main__':

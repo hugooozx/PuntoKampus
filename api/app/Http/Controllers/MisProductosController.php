@@ -21,7 +21,7 @@ class MisProductosController extends Controller
 
     public function indice(Request $request)
     {
-        $productos = $this->productos($request)->with('fotos')->orderByDesc('id')->get();
+        $productos = $this->productos($request)->conReservas()->with('fotos')->orderByDesc('id')->get();
 
         return ProductoResource::collection($productos);
     }
@@ -59,6 +59,51 @@ class MisProductosController extends Controller
         $this->limpiarArchivos();
 
         return response()->noContent();
+    }
+
+    public function inventario(Request $request, int $producto)
+    {
+        $datos = $request->validate([
+            'tipo' => ['required', 'in:activacion,desactivacion,venta_externa,reposicion,correccion'],
+            'existencias_esperadas' => ['present', 'nullable', 'integer:strict', 'between:0,999999'],
+            'cantidad' => ['exclude_if:tipo,desactivacion', 'required', 'integer:strict', 'between:0,999999'],
+        ], [
+            'tipo.*' => 'Elige un tipo de ajuste válido.',
+            'cantidad.*' => 'Escribe una cantidad entera entre 0 y 999999.',
+            'existencias_esperadas.*' => 'Vuelve a abrir el inventario para consultar las existencias.',
+        ]);
+        $entidad = DB::transaction(function () use ($request, $producto, $datos) {
+            $entidad = $this->productos($request)->lockForUpdate()->findOrFail($producto);
+            $actual = $entidad->existencias;
+            $tipo = $datos['tipo'];
+            abort_unless($datos['existencias_esperadas'] === $actual, 409, 'Las existencias cambiaron. Actualiza el inventario y revisa el ajuste.');
+            abort_unless(($tipo === 'activacion') === ($actual === null), 422, 'Revisa si el control de inventario está activo.');
+            $cantidad = $datos['cantidad'] ?? 0;
+            if (in_array($tipo, ['venta_externa', 'reposicion'], true) && $cantidad === 0) {
+                throw ValidationException::withMessages(['cantidad' => 'Escribe al menos una unidad.']);
+            }
+            $nuevo = match ($tipo) {
+                'desactivacion' => null,
+                'venta_externa' => $actual - $cantidad,
+                'reposicion' => $actual + $cantidad,
+                default => $cantidad,
+            };
+            $reservadas = $entidad->reservadas();
+            if ($nuevo !== null && $nuevo < 0) {
+                throw ValidationException::withMessages(['cantidad' => 'La venta excede las existencias físicas.']);
+            }
+            if (($nuevo ?? 0) < $reservadas) {
+                throw ValidationException::withMessages(['cantidad' => "Hay $reservadas unidades reservadas. Conserva esas unidades en el inventario."]);
+            }
+            if ($nuevo !== null && $nuevo > 999999) {
+                throw ValidationException::withMessages(['cantidad' => 'El inventario admite hasta 999999 unidades.']);
+            }
+            $entidad->registrarExistencias($nuevo, $tipo);
+
+            return $entidad->load('fotos');
+        });
+
+        return new ProductoResource($entidad);
     }
 
     public function agregarFoto(Request $request, int $producto)

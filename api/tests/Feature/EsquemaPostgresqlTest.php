@@ -18,13 +18,16 @@ class EsquemaPostgresqlTest extends TestCase
     public function test_migracion_vacia_reversible_y_repetible(): void
     {
         $migration = $this->migration();
+        $inventario = require database_path('migrations/2026_11_15_000000_agregar_inventario.php');
+        $inventario->down();
         $migration->down();
         $this->assertFalse(DB::getSchemaBuilder()->hasTable('usuarios'));
         $migration->up();
         $migration->up();
         (require database_path('migrations/2026_11_14_020000_agregar_idempotencia_pedidos.php'))->up();
+        $inventario->up();
         $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
-        $this->assertCount(21, $tables); // 19 de dominio, migraciones y reintentos de archivos.
+        $this->assertCount(22, $tables); // 20 de dominio, migraciones y reintentos de archivos.
         $this->assertDatabaseCount('usuarios', 0);
         $this->assertDatabaseCount('tiendas', 0);
     }

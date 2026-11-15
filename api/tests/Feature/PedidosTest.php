@@ -76,6 +76,76 @@ class PedidosTest extends TestCase
         $this->assertDatabaseCount('pedidos', 0);
     }
 
+    public function test_ventas_externas_reservas_y_entregas_conservan_las_existencias(): void
+    {
+        [$tienda, $producto, $dueno] = $this->tienda('inventario');
+        $venta = $this->sesion($dueno);
+        $compra = $this->sesion($this->usuario('comprador-inventario'));
+        $ruta = "/api/v1/mi-tienda/productos/{$producto->id}/inventario";
+        $activar = ['tipo' => 'activacion', 'cantidad' => 50, 'existencias_esperadas' => null];
+        $this->withToken($compra)->postJson($ruta, $activar)->assertNotFound();
+        $this->withToken($venta)->postJson($ruta, $activar)->assertOk()->assertJsonPath('data.existencias', 50);
+        $ajuste = ['tipo' => 'venta_externa', 'cantidad' => 20, 'existencias_esperadas' => 50];
+        $this->postJson($ruta, $ajuste)->assertOk()->assertJsonPath('data.unidades_disponibles', 30);
+        $this->postJson($ruta, $ajuste)->assertConflict();
+        $this->postJson($ruta, array_replace($ajuste, ['cantidad' => 'a', 'existencias_esperadas' => 30]))
+            ->assertUnprocessable()->assertJsonValidationErrors('cantidad');
+
+        $datos = $this->datos($tienda, $producto);
+        $datos['items'][0]['cantidad'] = 5;
+        $pedido = $this->withToken($compra)->postJson(self::RUTA, $datos)->assertCreated()->json('pedido.id');
+        $publico = '/api/v1/tiendas/'.$tienda->slug;
+        $this->getJson($publico)->assertOk()->assertJsonPath('data.productos.0.unidades_disponibles', 25)
+            ->assertJsonMissingPath('data.productos.0.existencias');
+        $gestion = $this->withToken($venta);
+        $gestion->getJson('/api/v1/mi-tienda/productos')->assertOk()->assertJsonPath('data.0.reservadas', 5);
+        $gestion->postJson($ruta, ['tipo' => 'correccion', 'cantidad' => 4, 'existencias_esperadas' => 30])
+            ->assertUnprocessable()->assertJsonValidationErrors('cantidad');
+        $gestion->postJson($ruta, ['tipo' => 'desactivacion', 'existencias_esperadas' => 30])
+            ->assertUnprocessable()->assertJsonValidationErrors('cantidad');
+        $gestion->getJson('/api/v1/mi-tienda/pedidos?estado=pendiente')->assertOk()
+            ->assertJsonPath('data.0.comprador', 'Ana Pérez')->assertJsonPath('data.0.items.0.cantidad', 5);
+        $entregar = "/api/v1/mi-tienda/pedidos/$pedido/entregado";
+        $this->withToken($compra)->postJson($entregar)->assertNotFound();
+        $this->withToken($venta)->postJson($entregar)->assertOk()->assertJsonPath('data.estado', 'entregado');
+        $this->postJson($entregar)->assertOk();
+        $this->assertDatabaseHas('productos', ['id' => $producto->id, 'existencias' => 25]);
+        $this->assertDatabaseCount('movimientos_inventario', 3);
+        $this->withToken($compra)->getJson(self::RUTA)->assertOk()->assertJsonPath('data.0.estado', 'entregado');
+        $this->postJson(self::RUTA."/$pedido/cancelar")->assertConflict();
+    }
+
+    public function test_cancelacion_y_vencimiento_liberan_la_ultima_unidad(): void
+    {
+        [$tienda, $producto, $dueno] = $this->tienda('inventario-vencido');
+        $venta = $this->sesion($dueno);
+        $compra = $this->sesion($this->usuario('comprador-vencido'));
+        $this->withToken($venta)->postJson("/api/v1/mi-tienda/productos/{$producto->id}/inventario",
+            ['tipo' => 'activacion', 'cantidad' => 1, 'existencias_esperadas' => null])->assertOk();
+        $datos = $this->datos($tienda, $producto);
+        $datos['items'][0]['cantidad'] = 1;
+        $this->withToken($compra);
+        $primero = $this->postJson(self::RUTA, $datos)->assertCreated()->json('pedido.id');
+        $this->getJson('/api/v1/productos')->assertOk()->assertJsonPath('data.0.disponible', false);
+        $this->postJson(self::RUTA, $datos)->assertUnprocessable()->assertJsonValidationErrors('items');
+        $this->postJson(self::RUTA."/$primero/cancelar")->assertOk()->assertJsonPath('data.cancelado_por', 'comprador');
+
+        $segundo = $this->postJson(self::RUTA, $datos)->assertCreated()->json('pedido.id');
+        $this->withToken($venta)->postJson("/api/v1/mi-tienda/pedidos/$segundo/cancelar")
+            ->assertOk()->assertJsonPath('data.cancelado_por', 'vendedor');
+        $tercero = $this->withToken($compra)->postJson(self::RUTA, $datos)->assertCreated()->json('pedido.id');
+        $this->travel(24)->hours();
+        $this->artisan('pedidos:vencer')->assertExitCode(0);
+        $this->assertDatabaseHas('pedidos', ['id' => $tercero, 'estado' => 'pendiente']);
+        $this->travel(2)->hours();
+        $this->artisan('pedidos:vencer')->assertExitCode(0);
+        $this->artisan('pedidos:vencer')->assertExitCode(0);
+        $this->withToken($this->sesion($dueno))->getJson('/api/v1/mi-tienda/pedidos?estado=vencido')->assertOk()
+            ->assertJsonPath('data.0.id', $tercero)->assertJsonPath('data.0.estado', 'vencido');
+        $this->getJson('/api/v1/productos')->assertOk()->assertJsonPath('data.0.unidades_disponibles', 1);
+        $this->assertDatabaseCount('movimientos_inventario', 1);
+    }
+
     private function usuario(string $nombre): Usuario
     {
         return Usuario::create(['correo' => "$nombre@utb.edu.ec", 'nombres' => 'Ana Pérez', 'acepto_privacidad_en' => now()]);

@@ -7,6 +7,7 @@ import '../api/catalog_api.dart';
 import '../ui/catalog_cards.dart';
 import '../ui/kampus_design.dart';
 import 'my_products.dart';
+import 'purchase.dart';
 
 Future<Uint8List?> _chooseLogo() async {
   final image = await ImagePicker().pickImage(
@@ -218,6 +219,21 @@ class _MyShopPageState extends State<MyShopPage> {
               ),
               icon: const Icon(Icons.inventory_2_outlined),
               label: const Text('Mis productos'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: const Text('Pedidos de mi tienda'),
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SellerOrdersPage(
+                    session: widget.session,
+                    shopName: store['nombre'] as String,
+                    onChanged: widget.onChanged,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             if (active)

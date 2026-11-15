@@ -110,6 +110,8 @@ class ProductPurchase extends StatefulWidget {
 
 class _ProductPurchaseState extends State<ProductPurchase> {
   int quantity = 1;
+  int get maximum =>
+      min(20, widget.product.json['unidades_disponibles'] as int? ?? 20);
 
   Future<void> _add(PurchaseCart cart) async {
     if (cart.shop != null && cart.shop!.id != widget.shop.id) {
@@ -135,10 +137,12 @@ class _ProductPurchaseState extends State<ProductPurchase> {
       if (!mounted || replace != true) return;
       cart.clear();
     }
-    if (cart.quantity(widget.product.id) + quantity > 20) {
+    if (cart.quantity(widget.product.id) + quantity > maximum) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Puedes agregar hasta 20 unidades por producto.'),
+        SnackBar(
+          content: Text(
+            'Puedes agregar hasta $maximum unidades de este producto.',
+          ),
         ),
       );
       return;
@@ -170,6 +174,7 @@ class _ProductPurchaseState extends State<ProductPurchase> {
               const SizedBox(height: 4),
               _Quantity(
                 value: quantity,
+                maximum: maximum,
                 onChanged: (value) => setState(() => quantity = value),
               ),
               const SizedBox(height: 8),
@@ -193,8 +198,12 @@ class _ProductPurchaseState extends State<ProductPurchase> {
 }
 
 class _Quantity extends StatelessWidget {
-  const _Quantity({required this.value, required this.onChanged});
-  final int value;
+  const _Quantity({
+    required this.value,
+    required this.onChanged,
+    this.maximum = 20,
+  });
+  final int value, maximum;
   final ValueChanged<int> onChanged;
   @override
   Widget build(BuildContext context) => Row(
@@ -216,7 +225,7 @@ class _Quantity extends StatelessWidget {
       IconButton.outlined(
         tooltip: 'Aumentar cantidad',
         icon: const Icon(Icons.add),
-        onPressed: value < 20 ? () => onChanged(value + 1) : null,
+        onPressed: value < maximum ? () => onChanged(value + 1) : null,
       ),
     ],
   );
@@ -779,31 +788,160 @@ class _OrderSent extends StatelessWidget {
   );
 }
 
-class BuyerOrders extends StatefulWidget {
-  const BuyerOrders({super.key, required this.visible});
+class BuyerOrders extends StatelessWidget {
+  const BuyerOrders({super.key, required this.visible, this.onChanged});
   final bool visible;
+  final VoidCallback? onChanged;
   @override
-  State<BuyerOrders> createState() => _BuyerOrdersState();
+  Widget build(BuildContext context) {
+    final session = PurchaseScope.of(context).session;
+    if (!visible || !session.signedIn) return const SizedBox.shrink();
+    return _OrderHistory(session: session, onChanged: onChanged);
+  }
 }
 
-class _BuyerOrdersState extends State<BuyerOrders> {
-  Future<Json>? result;
+class SellerOrdersPage extends StatelessWidget {
+  const SellerOrdersPage({
+    super.key,
+    required this.session,
+    required this.shopName,
+    required this.onChanged,
+  });
+  final AccountSession session;
+  final String shopName;
+  final VoidCallback onChanged;
+
   @override
-  void didUpdateWidget(BuyerOrders oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.visible && !oldWidget.visible) result = null;
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Mi tienda')),
+    body: SafeArea(
+      child: _OrderHistory(
+        session: session,
+        shopName: shopName,
+        onChanged: onChanged,
+      ),
+    ),
+  );
+}
+
+const _filters = <String, String>{
+  '': 'Todos',
+  'pendiente': 'Pendientes',
+  'entregado': 'Entregados',
+  'cancelado': 'Cancelados',
+  'vencido': 'Vencidos',
+};
+
+class _OrderHistory extends StatefulWidget {
+  const _OrderHistory({required this.session, this.shopName, this.onChanged});
+  final AccountSession session;
+  final String? shopName;
+  final VoidCallback? onChanged;
+
+  @override
+  State<_OrderHistory> createState() => _OrderHistoryState();
+}
+
+class _OrderHistoryState extends State<_OrderHistory> {
+  String filter = '';
+  int page = 1;
+  bool busy = false;
+  String? error;
+  bool get seller => widget.shopName != null;
+  String get path => seller ? 'mi-tienda/pedidos' : 'pedidos';
+  late Future<Json> result = _load();
+
+  Future<Json> _load() => widget.session.authorized(
+    'GET',
+    '$path?pagina=$page${filter.isEmpty ? '' : '&estado=$filter'}',
+  );
+
+  void _go(int next, {String? state}) => setState(() {
+    page = next;
+    filter = state ?? filter;
+    error = null;
+    result = _load();
+  });
+
+  Future<void> _change(Json order, {required bool deliver}) async {
+    final action = deliver ? 'Marcar como entregado' : 'Cancelar pedido';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(action),
+        content: Text(
+          deliver
+              ? 'Confirma que entregaste el pedido ${order['codigo']}.'
+              : 'Se cancelará el pedido ${order['codigo']} y se liberarán las unidades reservadas.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true || busy) return;
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await widget.session.authorized(
+        'POST',
+        '$path/${order['id']}/${deliver ? 'entregado' : 'cancelar'}',
+      );
+      if (!mounted) return;
+      widget.onChanged?.call();
+      _go(1);
+    } on ApiFailure catch (failure) {
+      if (!mounted) return;
+      setState(() {
+        error = failure.message;
+        result = _load();
+      });
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final session = PurchaseScope.of(context).session;
-    if (widget.visible && session.signedIn) {
-      result ??= session.authorized('GET', 'pedidos');
-    }
     return PageBody(
-      width: 560,
+      width: 600,
       children: [
-        const TitleBlock('Mis pedidos'),
+        TitleBlock(
+          seller ? 'Pedidos de mi tienda' : 'Mis pedidos',
+          subtitle: widget.shopName,
+        ),
+        if (seller) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final entry in _filters.entries)
+                ChoiceChip(
+                  label: Text(entry.value),
+                  labelStyle: entry.key == 'vencido' && filter == entry.key
+                      ? const TextStyle(color: Colors.white)
+                      : null,
+                  selectedColor: entry.key == 'vencido'
+                      ? const Color(0xFF52385E)
+                      : null,
+                  showCheckmark: false,
+                  selected: filter == entry.key,
+                  onSelected: busy ? null : (_) => _go(1, state: entry.key),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
+        if (error != null) _Error(error!),
         FutureBuilder<Json>(
           future: result,
           builder: (context, snapshot) {
@@ -816,30 +954,58 @@ class _BuyerOrdersState extends State<BuyerOrders> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('No pudimos cargar tus pedidos.'),
+                  const Text('No pudimos cargar los pedidos.'),
                   OutlinedButton(
-                    onPressed: () => setState(
-                      () => result = session.authorized('GET', 'pedidos'),
-                    ),
+                    onPressed: () => _go(page),
                     child: const Text('Reintentar'),
                   ),
                 ],
               );
             }
             final orders = (snapshot.data?['data'] as List? ?? []).cast<Json>();
-            if (orders.isEmpty) {
-              return const Text(
-                'Todavía no has hecho pedidos. Busca en la vitrina lo que necesitas.',
-              );
-            }
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (orders.isEmpty)
+                  Text(
+                    seller
+                        ? filter.isEmpty
+                              ? 'Aún no te llegan pedidos. Comparte el enlace de tu tienda para que te encuentren.'
+                              : 'No tienes pedidos con este estado.'
+                        : 'Todavía no has hecho pedidos. Busca en la Vitrina lo que necesitas.',
+                  ),
                 for (final order in orders)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _OrderSummary(order: order),
+                    child: _OrderSummary(
+                      key: ValueKey(order['id']),
+                      order: order,
+                      seller: seller,
+                      history: true,
+                      onCancel: !busy && order['estado'] == 'pendiente'
+                          ? () => _change(order, deliver: false)
+                          : null,
+                      onDeliver:
+                          seller && !busy && order['estado'] == 'pendiente'
+                          ? () => _change(order, deliver: true)
+                          : null,
+                    ),
                   ),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    if (page > 1)
+                      OutlinedButton(
+                        onPressed: busy ? null : () => _go(page - 1),
+                        child: const Text('Anterior'),
+                      ),
+                    if (snapshot.data?['next_page_url'] != null)
+                      OutlinedButton(
+                        onPressed: busy ? null : () => _go(page + 1),
+                        child: const Text('Siguiente'),
+                      ),
+                  ],
+                ),
               ],
             );
           },
@@ -850,8 +1016,17 @@ class _BuyerOrdersState extends State<BuyerOrders> {
 }
 
 class _OrderSummary extends StatelessWidget {
-  const _OrderSummary({required this.order});
+  const _OrderSummary({
+    super.key,
+    required this.order,
+    this.seller = false,
+    this.history = false,
+    this.onCancel,
+    this.onDeliver,
+  });
   final Json order;
+  final bool seller, history;
+  final VoidCallback? onCancel, onDeliver;
   @override
   Widget build(BuildContext context) {
     final local = _ecuador(DateTime.parse('${order['hora_entrega']}Z'));
@@ -861,6 +1036,49 @@ class _OrderSummary extends StatelessWidget {
       'cancelado' => 'Cancelado',
       _ => 'Vencido',
     };
+    final (foreground, background) = switch (order['estado']) {
+      'pendiente' => (orange, const Color(0xFFFFECD9)),
+      'entregado' => (greenInk, const Color(0xFFE8F3E7)),
+      'cancelado' => (muted, const Color(0xFFEEECE8)),
+      _ => (const Color(0xFF52385E), const Color(0xFFEADDF3)),
+    };
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (seller)
+          Text(
+            order['comprador'] as String? ?? 'Usuario eliminado',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        for (final item in (order['items'] as List? ?? const []).cast<Json>())
+          Text('${item['cantidad']} × ${item['nombre_producto']}'),
+        if (order['nota'] case final String note when note.isNotEmpty)
+          Text('Nota: $note'),
+        if (history && order['estado'] == 'pendiente') ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (seller)
+                FilledButton(
+                  onPressed: onDeliver,
+                  child: const Text('Entregado'),
+                ),
+              OutlinedButton(
+                onPressed: onCancel,
+                child: Text(seller ? 'Cancelar' : 'Cancelar pedido'),
+              ),
+            ],
+          ),
+        ],
+        if (seller && order['estado'] == 'vencido')
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text('Venció 24 h después de la hora de entrega.'),
+          ),
+      ],
+    );
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -869,15 +1087,28 @@ class _OrderSummary extends StatelessWidget {
             order['codigo'] as String,
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          Text(
-            status,
-            style: const TextStyle(fontWeight: FontWeight.w700, color: orange),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              child: Text(
+                status,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: foreground,
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
-          Text(
-            order['tienda'] as String? ?? 'Tienda eliminada',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
+          if (!seller)
+            Text(
+              order['tienda'] as String? ?? 'Tienda eliminada',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           Text(
             '${order['punto_entrega']} · ${_day(local)} · ${_time(local.hour * 60 + local.minute)}',
           ),
@@ -887,6 +1118,15 @@ class _OrderSummary extends StatelessWidget {
             'Total: \$${order['total']}',
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
+          if (seller) ...[const Divider(), details],
+          if (history && !seller)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 4),
+              expandedCrossAxisAlignment: CrossAxisAlignment.start,
+              title: const Text('Ver detalle'),
+              children: [SizedBox(width: double.infinity, child: details)],
+            ),
         ],
       ),
     );

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../api/account_session.dart';
+import '../api/account_api.dart';
 import '../api/catalog_api.dart';
 import '../ui/catalog_cards.dart';
 import '../ui/kampus_design.dart';
@@ -80,10 +81,29 @@ class _MyProductsPageState extends State<MyProductsPage> {
         ),
       ),
     );
+    _reloadAfter(result);
+  }
+
+  void _reloadAfter(String? result) {
     if (!mounted || result == null) return;
     widget.onChanged();
     setState(() => products = _load());
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+  }
+
+  Future<void> _inventory(Json item) async {
+    final result = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _InventoryPage(session: widget.session, item: item),
+      ),
+    );
+    if (!mounted) return;
+    if (result == null) {
+      setState(() => products = _load());
+    } else {
+      _reloadAfter(result);
+    }
   }
 
   @override
@@ -137,10 +157,23 @@ class _MyProductsPageState extends State<MyProductsPage> {
                   for (final item in items)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),
-                      child: _ProductRow(
-                        item: item,
-                        api: widget.session.api.catalog,
-                        onTap: () => _openForm(item),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _ProductRow(
+                            item: item,
+                            api: widget.session.api.catalog,
+                            onTap: () => _openForm(item),
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: () => _inventory(item),
+                              icon: const Icon(Icons.inventory_2_outlined),
+                              label: const Text('Ajustar inventario'),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -213,6 +246,11 @@ class _ProductRow extends StatelessWidget {
                         KampusBadge.availability(
                           available: item['disponible'] == true,
                         ),
+                        if (item['unidades_disponibles'] case final int units)
+                          Text(
+                            '$units unidades libres',
+                            style: const TextStyle(color: muted),
+                          ),
                       ],
                     ),
                   ],
@@ -225,6 +263,205 @@ class _ProductRow extends StatelessWidget {
       ),
     );
   }
+}
+
+class _InventoryPage extends StatefulWidget {
+  const _InventoryPage({required this.session, required this.item});
+  final AccountSession session;
+  final Json item;
+
+  @override
+  State<_InventoryPage> createState() => _InventoryPageState();
+}
+
+class _InventoryPageState extends State<_InventoryPage> {
+  final form = GlobalKey<FormState>();
+  final amount = TextEditingController();
+  late final stock = widget.item['existencias'] as int?;
+  late final reserved = widget.item['reservadas'] as int? ?? 0;
+  late String action = stock == null ? 'activacion' : 'venta_externa';
+  bool saving = false;
+  String? error, amountError;
+
+  @override
+  void dispose() {
+    amount.dispose();
+    super.dispose();
+  }
+
+  String? _validate(String? text) {
+    final value = int.tryParse(text ?? '');
+    if (value == null || value < 0 || value > 999999) {
+      return 'Escribe un número de 0 a 999999.';
+    }
+    return switch (action) {
+      'venta_externa' when value > stock! - reserved =>
+        'Tienes ${stock! - reserved} unidades libres.',
+      'reposicion' when stock! + value > 999999 =>
+        'El máximo es 999999 unidades.',
+      'venta_externa' ||
+      'reposicion' when value == 0 => 'Escribe al menos una unidad.',
+      'correccion' || 'activacion' when value < reserved =>
+        'Conserva las $reserved unidades reservadas.',
+      _ => null,
+    };
+  }
+
+  Future<void> _save() async {
+    if (saving || !form.currentState!.validate()) return;
+    setState(() {
+      saving = true;
+      error = null;
+      amountError = null;
+    });
+    try {
+      await widget.session.authorized(
+        'POST',
+        '$_productsPath/${widget.item['id']}/inventario',
+        data: {
+          'tipo': action,
+          'existencias_esperadas': stock,
+          if (action != 'desactivacion') 'cantidad': int.parse(amount.text),
+        },
+      );
+      if (mounted) Navigator.pop(context, 'Inventario actualizado');
+    } on ApiFailure catch (failure) {
+      if (!mounted) return;
+      setState(() {
+        amountError = action != 'desactivacion' && failure is AccountFailure
+            ? failure.fields['cantidad']
+            : null;
+        if (amountError == null) error = failure.message;
+      });
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: !saving,
+    child: Scaffold(
+      appBar: AppBar(title: const Text('Mis productos')),
+      body: SafeArea(
+        child: PageBody(
+          width: 530,
+          children: [
+            TitleBlock(
+              'Ajustar inventario',
+              subtitle: widget.item['nombre'] as String,
+            ),
+            if (stock == null)
+              const Text(
+                'Activa el control de inventario para registrar tus existencias y reservar unidades en cada pedido.',
+              )
+            else ...[
+              Text('Existencias físicas: $stock'),
+              Text('Reservadas: $reserved'),
+              Text(
+                'Libres para vender: ${stock! - reserved}',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ],
+            const SizedBox(height: 16),
+            Form(
+              key: form,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (stock != null) ...[
+                    DropdownButtonFormField<String>(
+                      initialValue: action,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo de ajuste',
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: 'venta_externa',
+                          child: Text('Venta fuera de PuntoKampus'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'reposicion',
+                          child: Text('Reponer unidades'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 'correccion',
+                          child: Text('Corregir conteo'),
+                        ),
+                        if (reserved == 0)
+                          const DropdownMenuItem(
+                            value: 'desactivacion',
+                            child: Text('Desactivar control'),
+                          ),
+                      ],
+                      onChanged: saving
+                          ? null
+                          : (value) => setState(() {
+                              action = value!;
+                              amount.clear();
+                              error = null;
+                              amountError = null;
+                            }),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (action == 'desactivacion')
+                    const Text(
+                      'El producto volverá a usar solo el interruptor Disponible.',
+                    )
+                  else
+                    TextFormField(
+                      controller: amount,
+                      enabled: !saving,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: InputDecoration(
+                        labelText:
+                            action == 'activacion' || action == 'correccion'
+                            ? 'Existencias físicas'
+                            : 'Unidades',
+                        errorText: amountError,
+                      ),
+                      onChanged: (_) {
+                        if (amountError != null) {
+                          setState(() => amountError = null);
+                        }
+                      },
+                      validator: _validate,
+                    ),
+                  if (error != null)
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: saving ? null : _save,
+                    child: Text(
+                      saving
+                          ? 'Guardando…'
+                          : stock == null
+                          ? 'Activar inventario'
+                          : 'Guardar ajuste',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _Photo {
@@ -266,7 +503,10 @@ class _ProductFormState extends State<_ProductForm> {
     for (final row in initialPhotos)
       _Photo.saved(row['id'] as int, row['url'] as String),
   ];
-  late bool available = widget.product?['disponible'] as bool? ?? true;
+  late bool available =
+      (widget.product?['disponible_manual'] ?? widget.product?['disponible'])
+          as bool? ??
+      true;
   bool saving = false;
   bool picking = false;
   String? error;

@@ -6,7 +6,9 @@ use App\Models\PerfilVendedor;
 use App\Models\Producto;
 use App\Models\PuntoEntrega;
 use App\Models\Tienda;
+use App\Support\VencimientoPedidos;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +21,85 @@ class PedidoController extends Controller
 
     public function indice(Request $request)
     {
+        return $this->lista($request, $this->consultaPedidos()->where('p.comprador_id', $request->user()->id));
+    }
+
+    public function recibidos(Request $request)
+    {
+        return $this->lista($request, $this->consultaPedidos()
+            ->addSelect('u.nombres as comprador')->leftJoin('usuarios as u', 'u.id', '=', 'p.comprador_id')
+            ->where('t.usuario_id', $request->user()->id));
+    }
+
+    private function lista(Request $request, Builder $consulta)
+    {
         $datos = $request->validate(['estado' => ['sometimes', Rule::in(['pendiente', 'entregado', 'cancelado', 'vencido'])]]);
-        $lista = $this->consultaPedidos()->where('p.comprador_id', $request->user()->id)
+        $lista = $consulta
             ->when(isset($datos['estado']), fn ($consulta) => $consulta->where('p.estado', $datos['estado']))
-            ->orderByDesc('p.id')->simplePaginate(20, pageName: 'pagina');
+            ->orderByDesc('p.id')->simplePaginate(20, pageName: 'pagina')->withQueryString();
+        $items = $this->items()->whereIn('pedido_id', $lista->getCollection()->pluck('id'))->get()->groupBy('pedido_id');
+        $lista->through(function ($pedido) use ($items) {
+            $pedido->items = $items->get($pedido->id, []);
+
+            return $pedido;
+        });
 
         return response()->json($lista);
+    }
+
+    public function cancelarCompra(Request $request, int $id)
+    {
+        return $this->cambiarEstado(DB::table('pedidos')->where('comprador_id', $request->user()->id), $id, 'cancelado', 'comprador');
+    }
+
+    public function cancelarVenta(Request $request, int $id)
+    {
+        return $this->cambiarEstado($this->pedidosVenta($request), $id, 'cancelado', 'vendedor');
+    }
+
+    public function entregar(Request $request, int $id)
+    {
+        return $this->cambiarEstado($this->pedidosVenta($request), $id, 'entregado');
+    }
+
+    private function pedidosVenta(Request $request): Builder
+    {
+        return DB::table('pedidos')->whereIn('tienda_id', Tienda::where('usuario_id', $request->user()->id)->select('id'));
+    }
+
+    private function cambiarEstado(Builder $consulta, int $id, string $estado, ?string $actor = null)
+    {
+        $pedido = DB::transaction(function () use ($consulta, $id, $estado, $actor) {
+            $pedido = $consulta->where('id', $id)->lockForUpdate()->first();
+            abort_unless($pedido, 404, 'No encontramos ese pedido.');
+            if ($pedido->estado === $estado && $pedido->cancelado_por === $actor) {
+                return $this->detalle($id);
+            }
+            abort_unless($pedido->estado === 'pendiente', 409, 'Solo puedes cambiar un pedido pendiente.');
+            $ahora = CarbonImmutable::now('UTC');
+            if (CarbonImmutable::parse($pedido->hora_entrega, 'UTC')->lte(VencimientoPedidos::limite($ahora))) {
+                $estado = 'vencido';
+                $actor = null;
+            }
+            if ($estado === 'entregado') {
+                $cantidades = DB::table('detalles_pedidos')->where('pedido_id', $id)
+                    ->whereNotNull('producto_id')->pluck('cantidad', 'producto_id');
+                $productos = Producto::withTrashed()->whereIn('id', $cantidades->keys())->orderBy('id')->lockForUpdate()->get();
+                foreach ($productos as $producto) {
+                    if ($producto->existencias !== null) {
+                        $producto->registrarExistencias($producto->existencias - $cantidades[$producto->id], 'entrega', $id);
+                    }
+                }
+            }
+            DB::table('pedidos')->where('id', $id)->update([
+                'estado' => $estado, 'cancelado_por' => $actor, 'estado_cambiado_en' => $ahora->format('Y-m-d H:i:s.u'),
+            ]);
+
+            return $this->detalle($id);
+        });
+        abort_if($pedido->estado === 'vencido', 409, 'La fecha límite del pedido ya pasó.');
+
+        return response()->json(['data' => $pedido]);
     }
 
     public function crear(Request $request)
@@ -91,6 +166,10 @@ class PedidoController extends Controller
                         if ($producto->trashed() || ! $producto->disponible) {
                             throw ValidationException::withMessages(['items' => "$producto->nombre se agotó mientras armabas tu pedido. Quítalo del carrito para continuar."]);
                         }
+                        $unidades = $producto->unidadesDisponibles();
+                        if ($unidades !== null && $cantidad > $unidades) {
+                            throw ValidationException::withMessages(['items' => "Quedan $unidades unidades de $producto->nombre. Revisa la cantidad en el carrito."]);
+                        }
                         $lineas[] = [
                             'producto_id' => $producto->id, 'nombre_producto' => $producto->nombre,
                             'precio_unitario' => $producto->precio, 'cantidad' => $cantidad,
@@ -137,14 +216,26 @@ class PedidoController extends Controller
             ->join('puntos_entrega as e', 'e.id', '=', 'p.punto_entrega_id')
             ->join('vistas_totales_pedidos as v', 'v.pedido_id', '=', 'p.id')
             ->select(['p.id', 'p.codigo', 'p.estado', 'p.hora_entrega', 'p.forma_pago', 'p.nota',
-                'p.tienda_id', 'p.punto_entrega_id', 't.nombre as tienda', 'e.nombre as punto_entrega', 'v.total']);
+                'p.tienda_id', 'p.punto_entrega_id', 'p.cancelado_por', 't.nombre as tienda', 'e.nombre as punto_entrega', 'v.total']);
+    }
+
+    private function items(): Builder
+    {
+        return DB::table('vistas_detalles_pedidos')->orderBy('id')
+            ->select(['pedido_id', 'producto_id', 'nombre_producto', 'precio_unitario', 'cantidad', 'subtotal']);
+    }
+
+    private function detalle(int $id): object
+    {
+        $pedido = $this->consultaPedidos()->where('p.id', $id)->first();
+        $pedido->items = $this->items()->where('pedido_id', $id)->get();
+
+        return $pedido;
     }
 
     private function confirmacion(int $id, string $comprador): array
     {
-        $pedido = $this->consultaPedidos()->where('p.id', $id)->first();
-        $pedido->items = DB::table('vistas_detalles_pedidos')->where('pedido_id', $id)->orderBy('id')
-            ->get(['producto_id', 'nombre_producto', 'precio_unitario', 'cantidad', 'subtotal']);
+        $pedido = $this->detalle($id);
         $entrega = CarbonImmutable::parse($pedido->hora_entrega, 'UTC')->setTimezone('America/Guayaquil')->locale('es');
         $mensaje = ["Hola, soy $comprador. Te hice un pedido por PuntoKampus ($pedido->codigo):"];
         foreach ($pedido->items as $item) {
