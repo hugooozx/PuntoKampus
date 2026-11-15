@@ -853,7 +853,7 @@ class _DeliveryPageState extends State<_DeliveryPage> {
                     if (mounted) field.didChange(day);
                   },
             icon: const Icon(Icons.event_outlined),
-            label: Text(day == null ? 'Elegir día' : 'Día: ${_day(day!)}'),
+            label: Text(day == null ? 'Elegir día' : _day(day!)),
           ),
           if (field.hasError) _Error(field.errorText!),
         ],
@@ -1214,13 +1214,17 @@ class _OrderAmount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = total ? Theme.of(context).textTheme.titleLarge : null;
+    final style = total
+        ? Theme.of(context).textTheme.titleLarge
+              ?.copyWith(fontWeight: FontWeight.w800)
+        : null;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: Text(label, style: style)),
+        Expanded(flex: 3, child: Text(label, style: style)),
         const SizedBox(width: 8),
-        Flexible(
+        Expanded(
+          flex: 2,
           child: Text(
             amount,
             textAlign: TextAlign.end,
