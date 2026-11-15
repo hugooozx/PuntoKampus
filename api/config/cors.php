@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'paths' => ['api/*', 'storage/tiendas/*'],
+    'paths' => ['api/*', 'storage/tiendas/*', 'storage/productos/*'],
     'allowed_methods' => ['*'],
     'allowed_origins' => ['*'],
     'allowed_origins_patterns' => [],

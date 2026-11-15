@@ -7,6 +7,7 @@ import '../api/account_session.dart';
 import '../api/catalog_api.dart';
 import '../ui/catalog_cards.dart';
 import '../ui/kampus_design.dart';
+import 'my_products.dart';
 
 Future<Uint8List?> _chooseLogo() async {
   final image = await ImagePicker().pickImage(
@@ -205,8 +206,23 @@ class _MyShopPageState extends State<MyShopPage> {
               ),
             ],
             const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => Navigator.push<void>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MyProductsPage(
+                    session: widget.session,
+                    shopName: store['nombre'] as String,
+                    onChanged: widget.onChanged,
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: const Text('Mis productos'),
+            ),
+            const SizedBox(height: 8),
             if (active)
-              FilledButton(
+              OutlinedButton(
                 onPressed: () =>
                     Navigator.pushNamed(context, '/t/${store['slug']}'),
                 child: const Text('Ver tienda en la Vitrina'),

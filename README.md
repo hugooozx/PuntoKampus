@@ -8,7 +8,7 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **P
 
 Laravel consulta PostgreSQL. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
 
-La app principal conecta la Vitrina, el acceso institucional, Cuenta y la publicación y edición de tiendas con la API real. Consulta [cómo probar el acceso](docs/acceso-y-cuenta.md) y [cómo publicar una tienda](docs/mi-tienda.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos, la publicación de productos y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
+La app principal conecta la Vitrina, el acceso institucional, Cuenta, las tiendas y la gestión de productos con la API real. Consulta [cómo probar el acceso](docs/acceso-y-cuenta.md), [cómo publicar una tienda](docs/mi-tienda.md) y [cómo gestionar productos](docs/mis-productos.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
 
 ## Carpetas
 

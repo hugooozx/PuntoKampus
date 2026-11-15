@@ -105,6 +105,7 @@ class AccountSession extends ChangeNotifier {
     String path, {
     Json? data,
     Uint8List? image,
+    List<Uint8List> photos = const [],
   }) async {
     try {
       return await api.request(
@@ -113,6 +114,7 @@ class AccountSession extends ChangeNotifier {
         token: _token,
         data: data,
         image: image,
+        photos: photos,
       );
     } on ApiFailure catch (error) {
       if (error.status == 401) await clear();

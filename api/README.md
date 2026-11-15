@@ -15,7 +15,7 @@ Los datos persistentes están en `.local/postgresql/datos`. La instancia usa dos
 
 ## En otra computadora
 
-Se requiere PostgreSQL 16 o posterior con ICU y `unaccent`, PHP 8.4 con `pdo_pgsql` y Composer. Crea las bases UTF-8 `puntokampus` y `puntokampus_pruebas`, cada una con su propio rol propietario. Desde `api/`:
+Se requiere PostgreSQL 16 o posterior con ICU y `unaccent`, PHP 8.4 con `pdo_pgsql`, GD con WebP para las fotos de productos y Composer. Crea las bases UTF-8 `puntokampus` y `puntokampus_pruebas`, cada una con su propio rol propietario. Desde `api/`:
 
 1. Ejecuta `composer install`.
 2. Copia `.env.example` a `.env` y configura la conexión `pgsql`.

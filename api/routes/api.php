@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\MisProductosController;
 use App\Http\Controllers\MiTiendaController;
 use App\Http\Controllers\VitrinaController;
 use App\Http\Middleware\SesionInstitucional;
@@ -33,6 +34,14 @@ Route::prefix('v1')->group(function () {
         Route::put('mi-tienda', [MiTiendaController::class, 'actualizar']);
         Route::post('mi-tienda/logo', [MiTiendaController::class, 'logo']);
         Route::post('mi-tienda/portada', [MiTiendaController::class, 'portada']);
+        Route::prefix('mi-tienda/productos')->group(function () {
+            Route::get('/', [MisProductosController::class, 'indice']);
+            Route::post('/', [MisProductosController::class, 'crear']);
+            Route::put('{producto}', [MisProductosController::class, 'actualizar'])->whereNumber('producto');
+            Route::delete('{producto}', [MisProductosController::class, 'borrar'])->whereNumber('producto');
+            Route::post('{producto}/fotos', [MisProductosController::class, 'agregarFoto'])->whereNumber('producto');
+            Route::delete('{producto}/fotos/{foto}', [MisProductosController::class, 'quitarFoto'])->whereNumber(['producto', 'foto']);
+        });
     });
     Route::get('puntos-entrega', [VitrinaController::class, 'puntosEntrega']);
     Route::get('tiendas', [VitrinaController::class, 'tiendas']);

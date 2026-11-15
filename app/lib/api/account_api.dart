@@ -16,23 +16,40 @@ class AccountApi {
     Json? data,
     String? token,
     Uint8List? image,
+    List<Uint8List> photos = const [],
   }) async {
     try {
       final url = catalog.baseUrl.resolve(path);
       final http.BaseRequest request;
-      if (image != null) {
-        final upload = http.MultipartRequest(method, url);
+      if (image != null || photos.isNotEmpty) {
+        // PHP procesa multipart con POST; Laravel reconoce el método indicado.
+        final upload = http.MultipartRequest(
+          method == 'PUT' ? 'POST' : method,
+          url,
+        );
+        if (method == 'PUT') upload.fields['_method'] = 'PUT';
         for (final entry in (data ?? const <String, dynamic>{}).entries) {
           final value = entry.value;
-          if (value != null) {
+          if (value is List) {
+            for (var i = 0; i < value.length; i++) {
+              upload.fields['${entry.key}[$i]'] = value[i].toString();
+            }
+          } else if (value != null) {
             upload.fields[entry.key] = value is bool
                 ? (value ? '1' : '0')
                 : value.toString();
           }
         }
-        upload.files.add(
-          http.MultipartFile.fromBytes('imagen', image, filename: 'logo'),
-        );
+        if (image != null) {
+          upload.files.add(
+            http.MultipartFile.fromBytes('imagen', image, filename: 'imagen'),
+          );
+        }
+        for (final bytes in photos) {
+          upload.files.add(
+            http.MultipartFile.fromBytes('fotos[]', bytes, filename: 'foto'),
+          );
+        }
         request = upload;
       } else {
         final jsonRequest = http.Request(method, url);
@@ -47,7 +64,9 @@ class AccountApi {
       final response = await catalog.client
           .send(request)
           .then(http.Response.fromStream)
-          .timeout(catalog.timeout);
+          .timeout(
+            photos.isEmpty ? catalog.timeout : const Duration(seconds: 40),
+          );
       if (response.statusCode == 204) return {};
       final Json? json;
       try {
