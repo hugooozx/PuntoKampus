@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -14,15 +15,35 @@ class AccountApi {
     String path, {
     Json? data,
     String? token,
+    Uint8List? image,
   }) async {
     try {
-      final request = http.Request(method, catalog.baseUrl.resolve(path))
-        ..headers['Accept'] = 'application/json';
-      if (token != null) request.headers['Authorization'] = 'Bearer $token';
-      if (data != null) {
-        request.headers['Content-Type'] = 'application/json';
-        request.bodyBytes = utf8.encode(jsonEncode(data));
+      final url = catalog.baseUrl.resolve(path);
+      final http.BaseRequest request;
+      if (image != null) {
+        final upload = http.MultipartRequest(method, url);
+        for (final entry in (data ?? const <String, dynamic>{}).entries) {
+          final value = entry.value;
+          if (value != null) {
+            upload.fields[entry.key] = value is bool
+                ? (value ? '1' : '0')
+                : value.toString();
+          }
+        }
+        upload.files.add(
+          http.MultipartFile.fromBytes('imagen', image, filename: 'logo'),
+        );
+        request = upload;
+      } else {
+        final jsonRequest = http.Request(method, url);
+        if (data != null) {
+          jsonRequest.headers['Content-Type'] = 'application/json';
+          jsonRequest.bodyBytes = utf8.encode(jsonEncode(data));
+        }
+        request = jsonRequest;
       }
+      request.headers['Accept'] = 'application/json';
+      if (token != null) request.headers['Authorization'] = 'Bearer $token';
       final response = await catalog.client
           .send(request)
           .then(http.Response.fromStream)

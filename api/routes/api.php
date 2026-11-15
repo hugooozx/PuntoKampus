@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CuentaController;
+use App\Http\Controllers\MiTiendaController;
 use App\Http\Controllers\VitrinaController;
 use App\Http\Middleware\SesionInstitucional;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,15 @@ Route::prefix('v1')->group(function () {
         Route::delete('yo', [CuentaController::class, 'borrar']);
     });
     Route::get('categorias', [VitrinaController::class, 'categorias']);
+    Route::get('facultades', [MiTiendaController::class, 'facultades']);
+    Route::get('carreras', [MiTiendaController::class, 'carreras']);
+    Route::middleware(SesionInstitucional::class)->group(function () {
+        Route::get('mi-tienda', [MiTiendaController::class, 'ver']);
+        Route::post('mi-tienda', [MiTiendaController::class, 'crear']);
+        Route::put('mi-tienda', [MiTiendaController::class, 'actualizar']);
+        Route::post('mi-tienda/logo', [MiTiendaController::class, 'logo']);
+        Route::post('mi-tienda/portada', [MiTiendaController::class, 'portada']);
+    });
     Route::get('puntos-entrega', [VitrinaController::class, 'puntosEntrega']);
     Route::get('tiendas', [VitrinaController::class, 'tiendas']);
     Route::get('tiendas/{slug}', [VitrinaController::class, 'tienda']);

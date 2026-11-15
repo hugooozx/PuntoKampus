@@ -26,7 +26,7 @@ class AccountSession extends ChangeNotifier {
     _changed();
     try {
       _token = await storage!.read(key: _key);
-      if (_token != null) user = await _authorized('GET', 'yo');
+      if (_token != null) user = await authorized('GET', 'yo');
     } on ApiFailure catch (error) {
       if (error.status != 401) restoreError = error.message;
     } catch (_) {
@@ -60,17 +60,21 @@ class AccountSession extends ChangeNotifier {
   }
 
   Future<void> saveProfile(String name, {bool? consent, bool? whatsapp}) async {
-    user = await _authorized('PUT', 'yo', {
-      'nombres': name,
-      if (consent == true) 'acepto_privacidad': true,
-      'mostrar_whatsapp': ?whatsapp,
-    });
+    user = await authorized(
+      'PUT',
+      'yo',
+      data: {
+        'nombres': name,
+        if (consent == true) 'acepto_privacidad': true,
+        'mostrar_whatsapp': ?whatsapp,
+      },
+    );
     _changed();
   }
 
   Future<void> signOut() async {
     try {
-      await _authorized('POST', 'auth/salir');
+      await authorized('POST', 'auth/salir');
     } on ApiFailure catch (error) {
       if (error.status != 401) rethrow;
     }
@@ -78,17 +82,38 @@ class AccountSession extends ChangeNotifier {
   }
 
   Future<void> requestDeletion() async {
-    await _authorized('POST', 'yo/codigo-borrado');
+    await authorized('POST', 'yo/codigo-borrado');
   }
 
   Future<void> deleteAccount(String code) async {
-    await _authorized('DELETE', 'yo', {'codigo': code});
+    await authorized('DELETE', 'yo', data: {'codigo': code});
     await clear();
   }
 
-  Future<Json> _authorized(String method, String path, [Json? data]) async {
+  void reflectShop(Json response) {
+    if (user == null) return;
+    user = {
+      ...user!,
+      'tienda': response['tienda'],
+      'mostrar_whatsapp': response['mostrar_whatsapp'],
+    };
+    _changed();
+  }
+
+  Future<Json> authorized(
+    String method,
+    String path, {
+    Json? data,
+    Uint8List? image,
+  }) async {
     try {
-      return await api.request(method, path, token: _token, data: data);
+      return await api.request(
+        method,
+        path,
+        token: _token,
+        data: data,
+        image: image,
+      );
     } on ApiFailure catch (error) {
       if (error.status == 401) await clear();
       rethrow;

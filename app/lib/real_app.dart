@@ -8,6 +8,7 @@ import 'api/catalog_controller.dart';
 import 'ui/kampus_design.dart';
 import 'ui/catalog_cards.dart';
 import 'pages/institutional_account.dart';
+import 'pages/my_shop.dart';
 
 class PuntoKampusRealApp extends StatefulWidget {
   const PuntoKampusRealApp({super.key, required this.api, this.storage});
@@ -141,25 +142,36 @@ class _RealShellState extends State<RealShell> {
       index: selected,
       children: [
         RealCatalog(controller: controller),
-        for (final destination in destinations.skip(1).take(2))
-          PageBody(
-            children: [
-              TitleBlock(destination.label),
-              StatusPanel(
-                icon: destination.icon,
-                title: 'Próximamente',
-                message: destination.label == 'Mis pedidos'
-                    ? 'Los pedidos estarán disponibles en una próxima entrega.'
-                    : 'La creación de tiendas estará disponible en una próxima entrega.',
-                action: OutlinedButton(
-                  onPressed: () => setState(() => tab = 0),
-                  child: const Text('Explorar la vitrina'),
-                ),
+        PageBody(
+          children: [
+            const TitleBlock('Mis pedidos'),
+            StatusPanel(
+              icon: Icons.shopping_bag_outlined,
+              title: 'Próximamente',
+              message:
+                  'Los pedidos estarán disponibles en una próxima entrega.',
+              action: OutlinedButton(
+                onPressed: () => setState(() => tab = 0),
+                child: const Text('Explorar la vitrina'),
               ),
-            ],
+            ),
+          ],
+        ),
+        if (signedIn)
+          MyShopPage(
+            key: ValueKey(session.user!['id']),
+            session: session,
+            visible: selected == 2,
+            onChanged: controller.refresh,
           ),
         if (signedIn)
-          ProfileForm(key: ValueKey(session.user!['id']), session: session),
+          ProfileForm(
+            key: ValueKey((
+              session.user!['id'],
+              session.user!['mostrar_whatsapp'] != null,
+            )),
+            session: session,
+          ),
       ],
     );
     return Scaffold(

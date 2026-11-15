@@ -8,7 +8,7 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **M
 
 Laravel consulta la base MySQL 8.4 aprobada mediante migraciones verificadas. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
 
-La app principal consulta las rutas públicas de Vitrina y conecta el acceso institucional y Cuenta con Laravel y MySQL. Consulta [cómo probar acceso y cuenta](docs/acceso-y-cuenta.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos, la publicación de tiendas y productos, y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
+La app principal conecta la Vitrina, el acceso institucional, Cuenta y la publicación y edición de tiendas con Laravel y MySQL. Consulta [cómo probar el acceso](docs/acceso-y-cuenta.md) y [cómo publicar una tienda](docs/mi-tienda.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos, la publicación de productos y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
 
 ## Carpetas
 
@@ -56,7 +56,7 @@ flutter test
 
 En la instalación portátil de esta computadora, usa `../.tools/flutter/bin/flutter.bat` en lugar de `flutter` cuando estés dentro de `app/`.
 
-Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base parte vacía. Pulsa «Entrar» para solicitar un código y completar tu perfil. Mi tienda y Mis pedidos indican que sus funciones siguen pendientes. La demo antigua se ejecuta con `flutter run -t lib/main_demo.dart`.
+Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base parte vacía. Pulsa «Entrar» para solicitar un código y completar tu perfil. Después, abre Mi tienda para publicar tu emprendimiento con los catálogos cargados. La demo antigua se ejecuta con `flutter run -t lib/main_demo.dart`.
 
 ## Ejecutar la API
 

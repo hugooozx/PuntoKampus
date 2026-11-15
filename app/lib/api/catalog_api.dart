@@ -107,10 +107,12 @@ class CatalogApi {
     }
   }
 
-  Future<List<CatalogOption>> options(String path) async =>
-      ((await get(path))['data'] as List)
-          .map((e) => CatalogOption(e as Json))
-          .toList();
+  Future<List<CatalogOption>> options(
+    String path, [
+    Map<String, String>? query,
+  ]) async => ((await get(path, query))['data'] as List)
+      .map((e) => CatalogOption(e as Json))
+      .toList();
 
   Future<CatalogPageData> search({
     required bool products,
