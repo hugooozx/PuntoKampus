@@ -20,6 +20,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('auth/codigo', [CuentaController::class, 'pedirCodigo']);
         Route::post('auth/verificar', [CuentaController::class, 'verificar']);
+        Route::post('auth/codigo-recuperacion', [CuentaController::class, 'pedirRecuperacion']);
+        Route::post('auth/recuperar', [CuentaController::class, 'recuperar']);
         Route::post('cuentas/codigo-borrado', [CuentaController::class, 'pedirBorradoWeb']);
         Route::delete('cuentas', [CuentaController::class, 'borrarWeb']);
     });

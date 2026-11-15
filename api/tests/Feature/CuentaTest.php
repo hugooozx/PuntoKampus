@@ -102,6 +102,44 @@ class CuentaTest extends TestCase
         $this->assertNotNull($cuenta->fresh()->contrasena_hash);
     }
 
+    public function test_recuperacion_cambia_la_clave_revoca_sesiones_y_consume_solo_su_codigo(): void
+    {
+        $correo = 'recuperacion@utb.edu.ec';
+        $token = $this->entrar($correo);
+        $this->travel(61)->seconds();
+        $this->postJson('/api/v1/cuentas/codigo-borrado', compact('correo'))->assertNoContent();
+        $codigoBorrado = $this->ultimoCodigo();
+        $this->travel(61)->seconds();
+        $this->postJson('/api/v1/auth/codigo-recuperacion', compact('correo'))->assertNoContent();
+        $codigo = $this->ultimoCodigo();
+        $contrasena = '  nueva clave de prueba UTB  ';
+        $recuperacion = compact('correo', 'codigo', 'contrasena') + ['contrasena_confirmation' => $contrasena];
+        $this->postJson('/api/v1/auth/recuperar', ['contrasena_confirmation' => 'Distinta clave'] + $recuperacion)
+            ->assertUnprocessable()->assertJsonValidationErrors('contrasena');
+        if ($codigoBorrado !== $codigo) {
+            $this->postJson('/api/v1/auth/recuperar', ['codigo' => $codigoBorrado] + $recuperacion)->assertUnprocessable();
+        }
+        $this->postJson('/api/v1/auth/recuperar', $recuperacion)->assertNoContent();
+        $this->postJson('/api/v1/auth/recuperar', $recuperacion)->assertUnprocessable();
+        $this->withToken($token)->getJson('/api/v1/yo')->assertUnauthorized();
+
+        $ingreso = ['correo' => $correo, 'dispositivo' => 'Prueba', 'contrasena' => $contrasena];
+        $this->postJson('/api/v1/auth/entrar', ['contrasena' => self::CLAVE] + $ingreso)->assertUnprocessable();
+        $this->postJson('/api/v1/auth/entrar', $ingreso)->assertOk();
+    }
+
+    public function test_recuperacion_mantiene_la_respuesta_y_el_limite_para_correos_sin_cuenta(): void
+    {
+        $correo = 'sin-cuenta@utb.edu.ec';
+        $this->postJson('/api/v1/auth/codigo-recuperacion', compact('correo'))->assertNoContent();
+        $this->postJson('/api/v1/auth/codigo-recuperacion', compact('correo'))
+            ->assertTooManyRequests()->assertHeader('Retry-After');
+        $this->assertCount(0, Mail::mailer('array')->getSymfonyTransport()->messages());
+        $this->postJson('/api/v1/auth/recuperar', ['correo' => $correo, 'codigo' => '012345'] + $this->claveRegistro())
+            ->assertUnprocessable();
+        $this->assertDatabaseMissing('usuarios', compact('correo'));
+    }
+
     public function test_limite_de_envios_intentos_y_vencimiento(): void
     {
         $correo = 'intentos@utb.edu.ec';
