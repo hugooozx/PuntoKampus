@@ -16,7 +16,7 @@ class CatalogosInicialesSeeder extends Seeder
         }
 
         foreach (['Biblioteca', 'Entrada de FAFI', 'Entrada de FACIAG',
-            'Entrada de Ciencias de la Salud'] as $orden => $nombre) {
+            'Entrada de Ciencias de la Salud', 'Entrada de FCJSE'] as $orden => $nombre) {
             PuntoEntrega::firstOrCreate(['nombre' => $nombre], ['orden' => $orden + 1]);
         }
     }

@@ -10,7 +10,7 @@
 | Periodo académico y cobro Premium | `configuraciones`, `periodos_academicos` y `cuentas_bancarias` en PostgreSQL | Confirmar fechas, precio, titular, banco, tipo y número de cuenta, Deuna si aplica y plazo de conservación de comprobantes. Revisar **Premium** con una cuenta vendedora. |
 | Dirección web para los participantes | Web y API de prueba accesibles mediante HTTPS | Abrir la portada, una tienda, `/privacidad` y `/borrar-cuenta` directamente desde otro celular. |
 
-El entorno local usa el modo de registro de correo. El precio provisional de Premium es **USD 2,50**. La cuenta de cobro y el periodo de esta computadora son ficticios. Las facultades, carreras, semestres y puntos de entrega definitivos se cargarán cuando el equipo los confirme. Para el recorrido de usabilidad se pueden usar tiendas y pedidos de prueba, con el envío por WhatsApp y el flujo de pago detenidos en la pantalla de revisión.
+El entorno local usa el modo de registro de correo. El precio provisional de Premium es **USD 2,50**. La cuenta de cobro y el periodo de esta computadora son ficticios. El [catálogo UTB](catalogo-utb.md) documenta las fuentes de las carreras, las mallas verificadas y los puntos de entrega iniciales. Para el recorrido de usabilidad se pueden usar tiendas y pedidos de prueba, con el envío por WhatsApp y el flujo de pago detenidos en la pantalla de revisión.
 
 ## Ensayo local
 
