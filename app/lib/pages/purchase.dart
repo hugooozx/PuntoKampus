@@ -1072,10 +1072,14 @@ class _OrderSent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                SelectableText(
-                  order['codigo'] as String,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleLarge,
+                Semantics(
+                  label: 'Código del pedido ${order['codigo']}',
+                  excludeSemantics: true,
+                  child: SelectableText(
+                    order['codigo'] as String,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 _OrderBadge(state: order['estado']),
