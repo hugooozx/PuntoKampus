@@ -106,42 +106,54 @@ class MiTiendaController extends Controller
 
     public function logo(Request $request): array
     {
-        $tienda = $this->delUsuario($request)->firstOrFail();
-        $request->validate($this->reglasImagen('required'), $this->mensajes());
-        $archivo = $this->guardarImagen($request->file('imagen'));
-        $urlAnterior = $tienda->logo_url;
-        try {
-            DB::transaction(function () use ($tienda, $archivo, $urlAnterior) {
-                $tienda->update(['logo_url' => '/storage/'.$archivo]);
-                if ($urlAnterior && preg_match('~^/storage/(tiendas/[a-z0-9]+\.(jpg|png|webp))$~D', $urlAnterior, $ruta)) {
-                    DB::table('borrados_archivos')->insert(['disco' => 'public', 'ruta' => $ruta[1]]);
-                }
-            });
-        } catch (Throwable $error) {
-            Storage::disk('public')->delete($archivo);
-            throw $error;
-        }
-        if ($urlAnterior) {
-            app(BorradoCuenta::class)->limpiarArchivos();
-        }
-
-        return ['logo_url' => $tienda->logo_url];
+        return $this->cambiarImagen($request, 'logo_url');
     }
 
-    public function portada(Request $request)
+    public function portada(Request $request): array
     {
-        $tienda = $this->delUsuario($request)->firstOrFail();
-        abort_unless($tienda->tienePremium(), 403, 'La portada está disponible con Premium.');
-        abort(501, 'La carga de portadas se habilitará con el flujo Premium.');
+        return $this->cambiarImagen($request, 'portada_url');
+    }
+
+    private function cambiarImagen(Request $request, string $campo): array
+    {
+        $archivo = null;
+        $borrado = app(BorradoCuenta::class);
+        try {
+            $respuesta = DB::transaction(function () use ($request, $campo, $borrado, &$archivo) {
+                $tienda = $this->delUsuario($request)->lockForUpdate()->firstOrFail();
+                if ($campo === 'portada_url') {
+                    abort_unless($tienda->estado === 'activa' && $tienda->tienePremium(), 403, 'La portada está disponible con Premium para tiendas activas.');
+                }
+                $request->validate($this->reglasImagen('required'), $this->mensajes());
+                $archivo = $this->guardarImagen($request->file('imagen'));
+                $anterior = $tienda->{$campo};
+                $tienda->update([$campo => '/storage/'.$archivo]);
+                if ($anterior && str_starts_with($anterior, '/storage/tiendas/')) {
+                    $borrado->encolar('public', substr($anterior, strlen('/storage/')));
+                }
+
+                return [$campo => $tienda->{$campo}];
+            });
+        } catch (Throwable $error) {
+            if ($archivo && ! Storage::disk('public')->delete($archivo)) {
+                $borrado->encolar('public', $archivo);
+            }
+            throw $error;
+        }
+        $borrado->limpiarArchivos();
+
+        return $respuesta;
     }
 
     public function imagenPublica(string $archivo)
     {
-        abort_unless(Tienda::where('logo_url', '/storage/tiendas/'.$archivo)->exists(), 404);
+        $url = '/storage/tiendas/'.$archivo;
+        abort_unless(Tienda::where('logo_url', $url)->exists()
+            || Tienda::activas()->where('portada_url', $url)->whereHas('vigencia', fn ($plan) => $plan->where('plan', 'premium'))->exists(), 404);
         $disco = Storage::disk('public');
         abort_unless($disco->exists('tiendas/'.$archivo), 404);
 
-        return $disco->response('tiendas/'.$archivo, $archivo, ['X-Content-Type-Options' => 'nosniff']);
+        return $disco->response('tiendas/'.$archivo, $archivo, ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'no-cache']);
     }
 
     private function delUsuario(Request $request)

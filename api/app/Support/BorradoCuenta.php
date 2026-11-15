@@ -59,7 +59,7 @@ class BorradoCuenta
         ]);
     }
 
-    private function encolar(string $disco, ?string $ruta): void
+    public function encolar(string $disco, ?string $ruta): void
     {
         if ($ruta && preg_match('~^[a-zA-Z0-9_-]+(?:[./][a-zA-Z0-9_-]+)*$~D', $ruta)) {
             DB::table('borrados_archivos')->insert(['disco' => $disco, 'ruta' => $ruta]);

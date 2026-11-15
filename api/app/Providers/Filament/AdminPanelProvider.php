@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\AccesoPanel;
 use App\Filament\Resources\ReporteResource;
+use App\Filament\Resources\SolicitudPremiumResource;
 use App\Filament\Resources\TiendaResource;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -26,7 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors(['primary' => '#B94700'])
             ->login(AccesoPanel::class)
             ->authGuard('administracion')
-            ->resources([ReporteResource::class, TiendaResource::class])
+            ->resources([ReporteResource::class, TiendaResource::class, SolicitudPremiumResource::class])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

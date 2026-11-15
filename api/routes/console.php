@@ -1,6 +1,7 @@
 <?php
 
 use App\Support\BorradoCuenta;
+use App\Support\Premium;
 use App\Support\VencimientoPedidos;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -18,6 +19,12 @@ Artisan::command('pedidos:vencer', function () {
 })->purpose('Vencer pedidos pendientes 24 horas después de la entrega programada');
 
 Schedule::command('pedidos:vencer')->hourly()->withoutOverlapping();
+
+Artisan::command('premium:limpiar-comprobantes', function () {
+    app(Premium::class)->retirarFotos(app(BorradoCuenta::class));
+})->purpose('Limpiar las fotos de comprobantes al terminar su plazo');
+
+Schedule::command('premium:limpiar-comprobantes')->daily()->withoutOverlapping();
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());

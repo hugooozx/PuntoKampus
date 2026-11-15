@@ -7,6 +7,7 @@ import '../api/catalog_api.dart';
 import '../ui/catalog_cards.dart';
 import '../ui/kampus_design.dart';
 import 'my_products.dart';
+import 'premium.dart';
 import 'purchase.dart';
 
 Future<Uint8List?> _chooseLogo() async {
@@ -82,7 +83,7 @@ class _MyShopPageState extends State<MyShopPage> {
     );
   }
 
-  Future<void> _replaceLogo(Json data) async {
+  Future<void> _replaceLogo(Json data, {bool cover = false}) async {
     setState(() {
       uploading = true;
       uploadError = null;
@@ -92,7 +93,7 @@ class _MyShopPageState extends State<MyShopPage> {
       if (!mounted || image == null) return;
       final result = await widget.session.authorized(
         'POST',
-        'mi-tienda/logo',
+        cover ? 'mi-tienda/portada' : 'mi-tienda/logo',
         image: image,
       );
       if (!mounted) return;
@@ -251,6 +252,29 @@ class _MyShopPageState extends State<MyShopPage> {
               onPressed: uploading ? null : () => _replaceLogo(data),
               child: Text(uploading ? 'Subiendo logo…' : 'Cambiar logo'),
             ),
+            OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.push<void>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PremiumPage(session: widget.session),
+                  ),
+                );
+                if (mounted) {
+                  _refresh();
+                  widget.onChanged();
+                }
+              },
+              icon: const Icon(Icons.workspace_premium_outlined),
+              label: const Text('Premium'),
+            ),
+            if (active && store['plan'] == 'premium')
+              TextButton(
+                onPressed: uploading
+                    ? null
+                    : () => _replaceLogo(data, cover: true),
+                child: const Text('Cambiar portada'),
+              ),
             if (uploadError != null) _ShopError(uploadError!),
             if (store['plan'] != 'premium')
               const ListTile(
