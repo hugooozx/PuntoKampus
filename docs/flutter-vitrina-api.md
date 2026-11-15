@@ -33,7 +33,7 @@ $env:CHROME_EXECUTABLE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msed
 & ../.tools/flutter/bin/flutter.bat run -d chrome
 ```
 
-Sin `API_BASE_URL`, web/escritorio usan `127.0.0.1:8000` y Android usa `10.0.2.2:8000` (emulador). Un teléfono físico requiere la dirección accesible de la API y configuración de red; no se comprobó un APK en esta entrega. Android permite HTTP solamente en la variante debug; usar HTTPS para release. No hay credenciales de MySQL en Flutter.
+Sin `API_BASE_URL`, web/escritorio usan `127.0.0.1:8000` y Android usa `10.0.2.2:8000` (emulador). Un teléfono físico requiere la dirección accesible de la API y configuración de red; no se comprobó un APK en esta entrega. Android permite HTTP solamente en la variante debug; usar HTTPS para release. Solo Laravel se conecta a PostgreSQL.
 
 `API_BASE_URL` es un valor de compilación: volver a compilar después de cambiarlo. Para desplegar web en HTTPS, la API también debe usar HTTPS y CORS debe permitir el origen del sitio. La API pública actual permite peticiones sin cookies; esta política deberá revisarse al integrar autenticación.
 
@@ -43,7 +43,7 @@ Compilación local:
 flutter build web --no-web-resources-cdn --dart-define=API_BASE_URL=http://127.0.0.1:8000/api/v1
 ```
 
-Después abrir `Abrir PuntoKampus.cmd` en la raíz. Comprueba MySQL y API, y sirve la compilación en `http://127.0.0.1:8766`. El nombre histórico `scripts/abrir_demo.py` se conserva como servidor estático; lo servido es la compilación de la entrada real. Dejar abierta la ventana mientras se usa el sitio. MySQL/API continúan como procesos locales; `python scripts/mysql_local.py detener` detiene MySQL.
+Después abre `Abrir PuntoKampus.cmd` en la raíz. Inicia PostgreSQL y la API y sirve la compilación en `http://127.0.0.1:8766`. Deja abierta la ventana mientras uses el sitio. `python scripts/postgresql_local.py detener` detiene la base portátil.
 
 ## Diseño basado en las láminas
 

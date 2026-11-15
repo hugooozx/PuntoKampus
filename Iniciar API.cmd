@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-python scripts\mysql_local.py iniciar
+python scripts\postgresql_local.py iniciar
 if errorlevel 1 goto error
 ".tools\composer\php\php.exe" api\artisan migrate --force
 if errorlevel 1 goto error

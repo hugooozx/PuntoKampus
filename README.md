@@ -2,32 +2,33 @@
 
 Vitrina digital de emprendimientos de estudiantes de la Universidad Técnica de Babahoyo. **Tu campus, tus emprendimientos** es el eslogan propuesto para esta primera versión, todavía provisional.
 
-El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **MySQL 8.4 para los datos** y **Filament para administración**. Ambos desarrolladores trabajan en todo el stack: la división se hace por funcionalidades, no por tecnologías.
+El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **PostgreSQL para los datos** y **Filament para administración**. Ambos desarrolladores trabajan en todo el stack y se reparten funcionalidades.
 
 ## Estado de este incremento
 
-Laravel consulta la base MySQL 8.4 aprobada mediante migraciones verificadas. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
+Laravel consulta PostgreSQL. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
 
-La app principal conecta la Vitrina, el acceso institucional, Cuenta y la publicación y edición de tiendas con Laravel y MySQL. Consulta [cómo probar el acceso](docs/acceso-y-cuenta.md) y [cómo publicar una tienda](docs/mi-tienda.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos, la publicación de productos y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
+La app principal conecta la Vitrina, el acceso institucional, Cuenta y la publicación y edición de tiendas con la API real. Consulta [cómo probar el acceso](docs/acceso-y-cuenta.md) y [cómo publicar una tienda](docs/mi-tienda.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos, la publicación de productos y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
 
 ## Carpetas
 
-**Actualización del 14 de noviembre de 2026:** el diseño de la base cambia a **MySQL 8.4** por solicitud del usuario. El [SQL completo y vacío](database/mysql/puntokampus.sql), el [modelo de relaciones](database/mysql/modelo.md) y las [reglas e impacto de integración](database/mysql/README.md) están disponibles. La integración de Laravel ya está implementada; las migraciones anteriores están archivadas. Ver [estado de integración](docs/integracion-mysql-v1.md).
+PostgreSQL es el motor del PRD. El [SQL completo](database/postgresql/puntokampus.sql) y la [guía de instalación y traslado](database/postgresql/README.md) documentan el esquema y el paso desde la versión MySQL.
 
 | Ruta | Contenido |
 | --- | --- |
 | `app/` | Aplicación Flutter para Android y web |
-| `api/` | API de Vitrina en Laravel conectada a MySQL 8.4 |
+| `api/` | API Laravel conectada a PostgreSQL |
 | `docs/prd/` | Los nueve archivos originales del PRD, copiados sin modificaciones |
 | `docs/contexto/` | Contexto original del proyecto |
-| `database/mysql/` | Diseño MySQL 8.4 en 3FN, SQL completo, diagrama y pruebas |
+| `database/postgresql/` | Esquema PostgreSQL en 3FN y guía de traslado |
+| `database/mysql/` | Esquema histórico MySQL y diagrama de relaciones |
 | `docs/decisiones.md` | Decisiones vigentes y elementos provisionales |
 | `docs/primeras-tareas.md` | Incrementos y propuesta de reparto del trabajo |
 | `.github/PULL_REQUEST_TEMPLATE.md` | Plantilla de revisión de cambios |
 
 ## Ejecutar Flutter
 
-En esta computadora, abre `Abrir PuntoKampus.cmd`: prepara MySQL/API y sirve la compilación real de Flutter. Se necesita Python 3 y la ventana del servidor debe quedar abierta mientras pruebas. Configuración y alcance en [Flutter conectado a la API](docs/flutter-vitrina-api.md).
+En esta computadora, abre `Abrir PuntoKampus.cmd` para iniciar PostgreSQL, la API y la compilación web de Flutter. Se necesita Python 3 y la ventana del servidor debe quedar abierta mientras pruebas. Configuración y alcance en [Flutter conectado a la API](docs/flutter-vitrina-api.md).
 
 Para compilar desde el código se necesita Flutter 3.50 o posterior. Para Android también se requiere Android SDK y un emulador o un dispositivo.
 
@@ -60,7 +61,7 @@ Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base 
 
 ## Ejecutar la API
 
-En esta computadora, abrir `Iniciar API.cmd`. La API se sirve en `http://127.0.0.1:8000` y MySQL en `127.0.0.1:3307`. Las bases de desarrollo y pruebas están separadas. La configuración, migraciones y pruebas con MySQL real se describen en [api/README.md](api/README.md). La instalación no carga contenido.
+En esta computadora, abre `Iniciar API.cmd`. La API se sirve en `http://127.0.0.1:8000` y PostgreSQL en `127.0.0.1:5433`. Las bases de desarrollo y pruebas están separadas. Consulta la configuración en [api/README.md](api/README.md).
 
 Los archivos `.env` son locales. Cada desarrollador crea el suyo a partir del ejemplo y configura sus propios servicios. Nunca se comparten credenciales, claves privadas ni comprobantes reales mediante Git.
 

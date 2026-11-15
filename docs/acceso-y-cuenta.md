@@ -16,7 +16,7 @@ El iniciador aplica las migraciones, incluida la tabla técnica `borrados_archiv
 
 Se mantienen las siete rutas y los campos de acceso y cuenta en el PRD. Las respuestas de `GET /yo` y `PUT /yo` contienen `id`, `correo`, `nombres`, `acepto_privacidad_en`, `mostrar_whatsapp` y `tienda`. `mostrar_whatsapp` es nulo si falta el perfil de vendedor y `tienda` es nulo si la cuenta aún no tiene tienda. El sello de consentimiento permite retomar un registro incompleto aunque `es_nuevo` sea falso. La creación y edición de los datos académicos del vendedor se integrarán con el flujo de tiendas.
 
-El servidor autentica el encabezado Bearer con un middleware que lee `sesiones_acceso`. Esta implementación interna usa el esquema MySQL v1 aprobado y su hash SHA-256 sin instalar Sanctum. El cliente mantiene la cabecera del PRD. Para futuras rutas con sesión, el middleware exige perfil completo por defecto. Las rutas `/yo` y el cierre de sesión permiten terminar el alta o eliminar una cuenta incompleta.
+El servidor autentica el encabezado Bearer con un middleware que lee `sesiones_acceso` en PostgreSQL y verifica el hash SHA-256. El cliente mantiene la cabecera del PRD. Para futuras rutas con sesión, el middleware exige perfil completo por defecto. Las rutas `/yo` y el cierre de sesión permiten terminar el alta o eliminar una cuenta incompleta.
 
 | Ruta agregada (prefijo `/api/v1`) | Solicitud | Respuesta y uso |
 | --- | --- | --- |

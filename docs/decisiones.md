@@ -1,5 +1,7 @@
 # Decisiones vigentes
 
+**Motor vigente:** PostgreSQL, según la indicación posterior del usuario de seguir el PRD. Las decisiones sobre MySQL que aparecen más abajo se conservan como historial. El código y la [instalación local](../database/postgresql/README.md) ya usan PostgreSQL.
+
 Registro inicial: 13 de noviembre de 2026. Esta nota distingue las decisiones posteriores de los documentos originales del PRD; no sustituye el contrato de API.
 
 ## Producto y diseño

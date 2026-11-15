@@ -15,14 +15,22 @@ class AccesoInstitucional
     public function porCorreo(string $correo, Closure $operacion): mixed
     {
         // También serializa el alta de correos que aún no tienen fila en usuarios.
-        $llave = hash('sha256', DB::connection()->getDatabaseName().':acceso:'.$correo);
-        abort_unless((int) DB::selectOne('SELECT GET_LOCK(?, 5) AS tomado', [$llave])->tomado === 1,
-            503, 'Inténtalo de nuevo en unos segundos.');
+        $db = DB::connection();
+        $llave = 'puntokampus:acceso:'.$correo;
+        $limite = hrtime(true) + 5_000_000_000;
+        do {
+            $tomado = $db->selectOne('SELECT pg_try_advisory_lock(hashtextextended(?, 0))::int AS tomado', [$llave], false);
+            if ((int) $tomado->tomado === 1) {
+                break;
+            }
+            abort_if(hrtime(true) >= $limite, 503, 'Inténtalo de nuevo en unos segundos.');
+            usleep(100_000);
+        } while (true);
 
         try {
             return $operacion();
         } finally {
-            DB::selectOne('SELECT RELEASE_LOCK(?)', [$llave]);
+            $db->selectOne('SELECT pg_advisory_unlock(hashtextextended(?, 0))', [$llave], false);
         }
     }
 

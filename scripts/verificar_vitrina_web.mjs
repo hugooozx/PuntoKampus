@@ -4,7 +4,7 @@ import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 // Las respuestas de ejemplo solo se inyectan en este navegador de prueba.
-// No son una entrada de la aplicación ni escriben registros en MySQL.
+// No son una entrada de la aplicación ni escriben registros en la base de datos.
 const withFixtures = process.argv.includes('--fixtures');
 const fixture = withFixtures ? JSON.parse(await readFile('app/test/fixtures/vitrina.json', 'utf8')) : null;
 const outputDir = withFixtures ? '.local/verificaciones/laminas' : '.local/verificaciones';

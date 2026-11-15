@@ -2,15 +2,17 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Tests\TestCase;
 
-class EsquemaMysqlTest extends TestCase
+class EsquemaPostgresqlTest extends TestCase
 {
     private function migration(): object
     {
-        return require database_path('migrations/2026_11_14_000000_adoptar_esquema_mysql_v1.php');
+        return require database_path('migrations/2026_11_14_000000_crear_esquema_postgresql.php');
     }
 
     public function test_migracion_vacia_reversible_y_repetible(): void
@@ -20,7 +22,7 @@ class EsquemaMysqlTest extends TestCase
         $this->assertFalse(DB::getSchemaBuilder()->hasTable('usuarios'));
         $migration->up();
         $migration->up();
-        $tables = DB::select("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE'");
+        $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
         $this->assertCount(21, $tables); // 19 de dominio, migraciones y reintentos de archivos.
         $this->assertDatabaseCount('usuarios', 0);
         $this->assertDatabaseCount('tiendas', 0);
@@ -44,16 +46,28 @@ class EsquemaMysqlTest extends TestCase
         }
     }
 
-    public function test_no_adopta_una_tabla_con_definicion_incompatible(): void
+    public function test_no_adopta_un_esquema_anterior_sin_marca(): void
     {
-        DB::statement('ALTER TABLE categorias ADD columna_incompatible INT NULL');
+        DB::statement('COMMENT ON TABLE usuarios IS NULL');
         try {
             $this->migration()->up();
             $this->fail('Una estructura distinta requiere migracion explicita.');
-        } catch (RuntimeException $exception) {
-            $this->assertStringContainsString('categorias no coincide', $exception->getMessage());
+        } catch (QueryException $exception) {
+            DB::unprepared('ROLLBACK');
+            $this->assertStringContainsString('otro esquema', $exception->getMessage());
         } finally {
-            DB::statement('ALTER TABLE categorias DROP COLUMN columna_incompatible');
+            DB::statement("COMMENT ON TABLE usuarios IS 'PuntoKampus PostgreSQL v1'");
+        }
+    }
+
+    public function test_catalogo_conserva_unicidad_sin_mayusculas_ni_tildes(): void
+    {
+        $id = DB::table('categorias')->insertGetId(['nombre' => 'Café']);
+        try {
+            $this->expectException(UniqueConstraintViolationException::class);
+            DB::table('categorias')->insert(['nombre' => 'CAFE']);
+        } finally {
+            DB::table('categorias')->where('id', $id)->delete();
         }
     }
 }

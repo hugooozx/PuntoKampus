@@ -27,7 +27,8 @@ class BorradoCuenta
         });
         (clone $pedidos)->update(['nota' => null]);
         (clone $pedidos)->where('estado', 'pendiente')->update([
-            'estado' => 'cancelado', 'cancelado_por' => 'sistema', 'estado_cambiado_en' => now(),
+            'estado' => 'cancelado', 'cancelado_por' => 'sistema',
+            'estado_cambiado_en' => now()->format('Y-m-d H:i:s.u'),
         ]);
         DB::table('reportes')->where('reportado_por', $usuario->id)->delete();
         if ($tienda) {
@@ -54,7 +55,7 @@ class BorradoCuenta
         }
         (clone $solicitudes)->where('estado', '!=', 'aprobada')->delete();
         $solicitudes->whereNotNull('foto_comprobante')->update([
-            'foto_comprobante' => null, 'foto_borrada_en' => now(),
+            'foto_comprobante' => null, 'foto_borrada_en' => now()->format('Y-m-d H:i:s.u'),
         ]);
     }
 

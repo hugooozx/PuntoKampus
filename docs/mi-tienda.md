@@ -10,9 +10,9 @@ Para crear una tienda deben existir una facultad y una carrera activas, una cate
 
 ## Contrato
 
-- Flutter consulta `GET /api/v1/facultades` y `GET /api/v1/carreras?facultad_id=…` con el formato `data` de los otros catálogos. Envía `carrera_id` al crear, según la adaptación MySQL. Laravel deriva la facultad desde la carrera.
+- Flutter consulta `GET /api/v1/facultades` y `GET /api/v1/carreras?facultad_id=…` con el formato `data` de los otros catálogos. Envía `carrera_id` al crear. Laravel deriva la facultad desde la carrera.
 - `GET`, `POST` y `PUT /api/v1/mi-tienda` devuelven `tienda`, `ya_es_vendedor` y `mostrar_whatsapp`. `tienda` es nulo si aún no existe y usa los campos de la tienda pública más `motivo_baja`, exclusivo del dueño. Un `POST` exitoso devuelve 201. Para crear se envían los campos de tienda y, si faltan, `codigo_estudiante`, `carrera_id`, `semestre`, `whatsapp` y el booleano opcional `mostrar_whatsapp`. `PUT` recibe los datos editables de la tienda.
 - `POST /api/v1/mi-tienda` acepta JSON o formulario multipart con `imagen`. `POST /api/v1/mi-tienda/logo` reemplaza la imagen mediante el mismo campo y responde `logo_url`. Laravel admite JPG, PNG y WebP hasta 2 MB. Las rutas públicas `/tiendas` conservan su formato.
-- Las operaciones de escritura usan el usuario de la sesión institucional con perfil completo. Los IDs de dueño, plan y estado se resuelven en el servidor. El esquema de MySQL permanece igual.
+- Las operaciones de escritura usan el usuario de la sesión institucional con perfil completo. Los IDs de dueño, plan y estado se resuelven en el servidor. El cambio a PostgreSQL mantiene este contrato.
 
 Ejecuta `php artisan test --filter=MiTiendaTest` con la base de pruebas migrada. Cubre registro, publicación, edición, acceso de otra cuenta, categorías repetidas, WhatsApp privado, baja y reemplazo de logo. Para probar la interfaz local, abre «Mi tienda» con una cuenta de prueba y recorre ambos pasos con los catálogos cargados.

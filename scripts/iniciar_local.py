@@ -23,7 +23,7 @@ def api_ready():
 def main():
     if not (ROOT / 'app/build/web/index.html').exists():
         raise SystemExit('Primero compila Flutter web; consulta app/README.md.')
-    subprocess.run([sys.executable, str(ROOT / 'scripts/mysql_local.py'), 'iniciar'], check=True, cwd=ROOT)
+    subprocess.run([sys.executable, str(ROOT / 'scripts/postgresql_local.py'), 'iniciar'], check=True, cwd=ROOT)
     subprocess.run([str(PHP), 'artisan', 'migrate', '--force'], check=True, cwd=ROOT / 'api', creationflags=FLAGS)
     if not api_ready():
         log_dir = ROOT / '.local/api'

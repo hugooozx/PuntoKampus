@@ -54,6 +54,8 @@ class MiTiendaTest extends TestCase
 
         $this->withToken($this->sesion('otro@utb.edu.ec'))->putJson('/api/v1/mi-tienda', $editada)->assertNotFound();
         $this->getJson('/api/v1/mi-tienda')->assertOk()->assertJsonPath('tienda', null);
+        $homonima = $this->postJson('/api/v1/mi-tienda', $datos)->assertCreated();
+        $this->assertNotSame($slug, $homonima->json('tienda.slug'));
         $this->withToken($token)->postJson('/api/v1/mi-tienda/portada')->assertForbidden();
 
         DB::table('tiendas')->where('slug', $slug)->update([

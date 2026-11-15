@@ -1,5 +1,7 @@
 # Integración de la API con MySQL v1
 
+Documento histórico. La [instalación vigente](../database/postgresql/README.md) usa PostgreSQL.
+
 14 de noviembre de 2026. Base v1 aprobada por el dueño del producto. Rama `feat/api-vitrina-mysql`, dependiente de `feat/esquema-mysql` y de la API inicial de Vitrina.
 
 ## Qué se integró

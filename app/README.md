@@ -1,6 +1,6 @@
 # PuntoKampus para Android y web
 
-Aplicación Flutter conectada a la API real de Laravel y MySQL. La entrada principal es `lib/main.dart`; no carga datos ni usuarios ficticios.
+Aplicación Flutter conectada a la API Laravel, que usa PostgreSQL. La entrada principal es `lib/main.dart` y consulta los datos del servidor.
 
 Consulta [conexión, configuración y alcance](../docs/flutter-vitrina-api.md). En esta computadora, inicia la API con `Iniciar API.cmd` y usa F5 en VS Code. Para abrir la compilación web, utiliza `Abrir PuntoKampus.cmd`.
 

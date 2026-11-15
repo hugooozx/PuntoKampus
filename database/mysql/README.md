@@ -1,5 +1,7 @@
 # Base de datos de PuntoKampus
 
+Este documento conserva el diseño histórico de MySQL. Usa el [esquema vigente de PostgreSQL](../postgresql/README.md) para instalaciones actuales.
+
 Diseño del tramo 1, 14 de noviembre de 2026. El destino elegido para esta entrega es **MySQL 8.4 LTS**, conforme a la preferencia posterior del usuario. Sustituye PostgreSQL como objetivo del diseño; la integración de Laravel con esta estructura se documenta en [api/README.md](../../api/README.md).
 
 El entregable es [puntokampus.sql](puntokampus.sql): **19 tablas, 3 vistas y cero registros iniciales**. No incluye tiendas ficticias, usuarios, cuentas bancarias, categorías ni una configuración precargada. Tampoco crea usuarios del servidor MySQL ni incluye contraseñas.
