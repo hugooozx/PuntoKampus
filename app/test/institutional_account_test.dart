@@ -84,8 +84,8 @@ void main() {
     final save = requests.last;
     expect(save.headers['Authorization'], 'Bearer token-de-prueba');
     expect(jsonDecode(save.body), {'nombres': 'Ana María'});
-    await tester.ensureVisible(find.text('Salir'));
-    await tester.tap(find.text('Salir'));
+    await tester.ensureVisible(find.text('Cerrar sesión'));
+    await tester.tap(find.text('Cerrar sesión'));
     await tester.pumpAndSettle();
     expect(requests.last.url.path, '/api/v1/auth/salir');
     expect(find.text('Entrar'), findsOneWidget);

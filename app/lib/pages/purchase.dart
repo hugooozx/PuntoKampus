@@ -457,7 +457,7 @@ class _DeliveryPageState extends State<_DeliveryPage> {
         MaterialPageRoute<void>(
           builder: (_) => _OrderSent(order: order, whatsapp: whatsapp),
         ),
-        (route) => route.isFirst,
+        (route) => route.settings.name == '/vitrina' || route.isFirst,
       );
       if (whatsapp != null) await _openWhatsApp(whatsapp);
     } on AccountFailure catch (failure) {

@@ -8,14 +8,21 @@ import 'api/catalog_controller.dart';
 import 'ui/kampus_design.dart';
 import 'ui/catalog_cards.dart';
 import 'pages/institutional_account.dart';
+import 'pages/landing_page.dart';
 import 'pages/my_shop.dart';
 import 'pages/purchase.dart';
 import 'pages/report_shop.dart';
 
 class PuntoKampusRealApp extends StatefulWidget {
-  const PuntoKampusRealApp({super.key, required this.api, this.storage});
+  const PuntoKampusRealApp({
+    super.key,
+    required this.api,
+    this.storage,
+    this.publicLanding = false,
+  });
   final CatalogApi api;
   final FlutterSecureStorage? storage;
+  final bool publicLanding;
   @override
   State<PuntoKampusRealApp> createState() => _RealAppState();
 }
@@ -57,6 +64,7 @@ class _RealAppState extends State<PuntoKampusRealApp> {
       return MaterialPageRoute(
         settings: settings,
         builder: (_) => switch (path) {
+          '' when widget.publicLanding => LandingPage(session: session),
           '/privacidad' => PrivacyPage(api: session.api),
           '/borrar-cuenta' => DeleteAccountPage(
             session: session,
@@ -64,7 +72,16 @@ class _RealAppState extends State<PuntoKampusRealApp> {
           ),
           _ =>
             match == null
-                ? RealShell(api: widget.api, session: session)
+                ? RealShell(
+                    api: widget.api,
+                    session: session,
+                    initialTab: switch (path) {
+                      '/mi-tienda' => 2,
+                      '/cuenta' => 3,
+                      _ => 0,
+                    },
+                    publicLanding: widget.publicLanding,
+                  )
                 : ShopScreen(api: widget.api, slug: match.group(1)!),
         },
       );
@@ -94,16 +111,25 @@ void openEntry(BuildContext context, CatalogApi api, CatalogEntry entry) {
 }
 
 class RealShell extends StatefulWidget {
-  const RealShell({super.key, required this.api, required this.session});
+  const RealShell({
+    super.key,
+    required this.api,
+    required this.session,
+    this.initialTab = 0,
+    this.publicLanding = false,
+  });
   final CatalogApi api;
   final AccountSession session;
+  final int initialTab;
+  final bool publicLanding;
   @override
   State<RealShell> createState() => _RealShellState();
 }
 
 class _RealShellState extends State<RealShell> {
   late final controller = CatalogController(widget.api);
-  int tab = 0;
+  late int tab = widget.initialTab;
+  bool leaving = false;
   @override
   void initState() {
     super.initState();
@@ -122,25 +148,80 @@ class _RealShellState extends State<RealShell> {
     builder: (context, _) => buildShell(context),
   );
 
+  void _home() => Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+
+  void _returnAfterLogout() {
+    PurchaseScope.of(context).cart.clear();
+    if (widget.publicLanding) {
+      _home();
+    } else {
+      setState(() => tab = 0);
+    }
+  }
+
+  Future<void> _logout() async {
+    if (leaving) return;
+    setState(() => leaving = true);
+    try {
+      await widget.session.signOut();
+      if (mounted) _returnAfterLogout();
+    } on ApiFailure catch (failure) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(failure.message)));
+      }
+    } finally {
+      if (mounted) setState(() => leaving = false);
+    }
+  }
+
   Widget buildShell(BuildContext context) {
     final session = widget.session;
     final signedIn = session.signedIn;
     final selected = signedIn ? tab : 0;
     void enter() {
       if (session.restoring) return;
-      setState(() => tab = 0);
       Navigator.push(
         context,
         MaterialPageRoute<void>(
-          builder: (_) => InstitutionalLogin(session: session),
+          builder: (_) => InstitutionalLogin(
+            session: session,
+            seller: widget.initialTab == 2,
+          ),
         ),
       );
     }
 
+    if (!signedIn && widget.initialTab != 0) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('PuntoKampus')),
+        body: SafeArea(
+          child: PageBody(
+            width: 560,
+            children: [
+              StatusPanel(
+                icon: widget.initialTab == 2
+                    ? Icons.storefront_outlined
+                    : Icons.person_outline,
+                title: widget.initialTab == 2 ? 'Mi tienda' : 'Cuenta',
+                message: 'Entra con tu correo UTB para continuar.',
+                busy: session.restoring,
+                action: FilledButton(
+                  onPressed: session.restoring ? null : enter,
+                  child: const Text('Entrar con mi correo UTB'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (session.needsProfile) {
       return Scaffold(
         appBar: AppBar(title: const Text('Acceso UTB')),
-        body: SafeArea(child: ProfileForm(session: session)),
+        body: SafeArea(
+          child: ProfileForm(session: session, onSignedOut: _returnAfterLogout),
+        ),
       );
     }
     final desktop = MediaQuery.sizeOf(context).width >= 1000;
@@ -167,6 +248,7 @@ class _RealShellState extends State<RealShell> {
               session.user!['mostrar_whatsapp'] != null,
             )),
             session: session,
+            onSignedOut: _returnAfterLogout,
           ),
       ],
     );
@@ -189,9 +271,12 @@ class _RealShellState extends State<RealShell> {
                     Expanded(
                       child: ListView(
                         children: [
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
-                            child: Brand(),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: InkWell(
+                              onTap: widget.publicLanding ? _home : null,
+                              child: const Brand(),
+                            ),
                           ),
                           const SizedBox(height: 36),
                           for (
@@ -248,33 +333,55 @@ class _RealShellState extends State<RealShell> {
                     ),
                     const Divider(),
                     if (session.user?['nombres'] case final String name)
-                      ListTile(
-                        onTap: () => setState(() => tab = 3),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                        ),
-                        leading: CircleAvatar(
-                          backgroundColor: peach,
-                          foregroundColor: orange,
-                          child: Text(
-                            name
-                                .trim()
-                                .split(RegExp(r'\s+'))
-                                .where((part) => part.isNotEmpty)
-                                .take(2)
-                                .map(
-                                  (part) => part.characters.first.toUpperCase(),
-                                )
-                                .join(),
+                      PopupMenuButton<String>(
+                        tooltip: 'Menú de perfil',
+                        enabled: !leaving,
+                        onSelected: (value) {
+                          if (value == 'salir') {
+                            _logout();
+                          } else {
+                            setState(() => tab = 3);
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(
+                            value: 'cuenta',
+                            child: Text('Mi cuenta'),
                           ),
+                          PopupMenuItem(
+                            value: 'salir',
+                            child: Text('Cerrar sesión'),
+                          ),
+                        ],
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: peach,
+                            foregroundColor: orange,
+                            child: Text(
+                              name
+                                  .trim()
+                                  .split(RegExp(r'\s+'))
+                                  .where((part) => part.isNotEmpty)
+                                  .take(2)
+                                  .map(
+                                    (part) =>
+                                        part.characters.first.toUpperCase(),
+                                  )
+                                  .join(),
+                            ),
+                          ),
+                          title: Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                          subtitle: const Text('Mi cuenta'),
+                          trailing: const Icon(Icons.expand_more),
                         ),
-                        title: Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: const Text('Mi cuenta'),
                       )
                     else
                       const Padding(
@@ -295,7 +402,12 @@ class _RealShellState extends State<RealShell> {
                       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
                       child: Row(
                         children: [
-                          const Expanded(child: Brand()),
+                          Expanded(
+                            child: InkWell(
+                              onTap: widget.publicLanding ? _home : null,
+                              child: const Brand(),
+                            ),
+                          ),
                           if (!signedIn)
                             TextButton(
                               onPressed: session.restoring ? null : enter,
@@ -860,7 +972,7 @@ class _ShopScreenState extends State<ShopScreen> {
                   onPressed: unavailable
                       ? () => Navigator.pushNamedAndRemoveUntil(
                           context,
-                          '/',
+                          '/vitrina',
                           (_) => false,
                         )
                       : () => setState(() => future = load()),

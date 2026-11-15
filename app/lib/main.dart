@@ -1,4 +1,5 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -11,6 +12,7 @@ Future<void> main() async {
   runApp(
     PuntoKampusRealApp(
       api: CatalogApi(),
+      publicLanding: kIsWeb,
       storage: const FlutterSecureStorage(),
     ),
   );

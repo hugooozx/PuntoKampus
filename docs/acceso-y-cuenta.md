@@ -1,13 +1,13 @@
 # Acceso institucional y cuenta
 
-La Vitrina se abre sin sesión. «Entrar» lleva al correo institucional, la confirmación mediante un código de seis dígitos y, si falta, el alta con nombres y consentimiento. Con sesión aparecen las cuatro pestañas. Cuenta permite cambiar los nombres, controlar la visibilidad de WhatsApp cuando existe un perfil de vendedor, consultar privacidad, salir y solicitar el borrado. La creación del perfil de vendedor corresponde al incremento de tiendas.
+La portada web está en `/`. **Explorar la Vitrina** abre `/vitrina` sin sesión. **Quiero vender** usa el mismo acceso con correo UTB y código que el comprador. Después del alta con nombres y consentimiento, lleva a `/mi-tienda`, donde aparece la tienda existente o la opción **Crear mi tienda**. **Administración** abre el panel de Filament con su propia sesión y permiso. En Cuenta puedes editar los nombres, controlar la visibilidad de WhatsApp, consultar privacidad y solicitar el borrado.
 
 ## Probar en esta computadora
 
 1. Abre `Abrir PuntoKampus.cmd` y entra en `http://127.0.0.1:8766`. Si ya tienes abierta la Vitrina, recarga con Ctrl + F5.
 2. Pide el código con un correo ficticio, por ejemplo `prueba@fafi.utb.edu.ec`. Con la configuración local `MAIL_MAILER=log`, el correo de prueba queda en `api/storage/logs/laravel.log`. Busca la entrada más reciente para ese correo y copia sus seis dígitos. No uses datos personales en el modo de registro.
 3. Completa los nombres, abre la política y acepta la casilla para entrar. En Cuenta prueba guardar otro nombre y recargar la página para comprobar la sesión.
-4. Usa «Salir» para revocar esa sesión. Para eliminar el perfil de prueba, vuelve a entrar, abre «Borrar mi cuenta» y solicita un código de confirmación. El límite de 60 segundos es por correo y abarca ambos tipos de código.
+4. Usa **Cerrar sesión** desde Cuenta o el menú de perfil de escritorio. Revoca la sesión, vacía el carrito y vuelve a la portada web. Para eliminar el perfil de prueba, vuelve a entrar, abre «Borrar mi cuenta» y solicita un código de confirmación. El límite de 60 segundos es por correo y abarca ambos tipos de código.
 5. También puedes abrir directamente `http://127.0.0.1:8766/privacidad` y `http://127.0.0.1:8766/borrar-cuenta`. La segunda ruta permite borrar mediante correo y código incluso con una cuenta desactivada.
 
 El iniciador aplica las migraciones, incluida la tabla técnica `borrados_archivos`. Para desarrollo sin periodo académico configurado las sesiones vencen en siete días. Con un periodo activo vencen al terminar su último día en Ecuador continental. Los tiempos persistidos se guardan en UTC.
@@ -30,4 +30,4 @@ Los códigos vencen en diez minutos y se almacenan como hashes. Se bloquea el qu
 
 - Configurar un remitente SMTP autorizado en el `.env` del servidor y comprobar entrega y spam con correos UTB reales. El modo de registro de correo es local.
 - Configurar el periodo académico activo, el responsable y el correo de privacidad (`PK_RESPONSABLE_DATOS`, `PK_CORREO_PRIVACIDAD`). El texto local es un borrador basado en el PRD y queda sujeto a la revisión del equipo.
-- Servir la web y la API mediante HTTPS. El servidor web debe devolver `index.html` al abrir directamente `/t/{slug}`, `/privacidad` o `/borrar-cuenta`. El navegador local usa almacenamiento cifrado de la sesión mediante WebCrypto y Android usa su almacenamiento seguro.
+- Servir la web y la API mediante HTTPS. El servidor web debe devolver `index.html` al abrir directamente `/vitrina`, `/mi-tienda`, `/cuenta`, `/t/{slug}`, `/privacidad` o `/borrar-cuenta`. El navegador local usa almacenamiento cifrado de la sesión mediante WebCrypto y Android usa su almacenamiento seguro.

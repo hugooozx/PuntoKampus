@@ -31,10 +31,17 @@ mixin _AccountAction<T extends StatefulWidget> on State<T> {
 }
 
 class InstitutionalLogin extends StatelessWidget {
-  const InstitutionalLogin({super.key, required this.session});
+  const InstitutionalLogin({
+    super.key,
+    required this.session,
+    this.seller = false,
+    this.browseOnExit = false,
+  });
   final AccountSession session;
+  final bool seller, browseOnExit;
   @override
-  Widget build(BuildContext context) => _CodeFlow(session: session);
+  Widget build(BuildContext context) =>
+      _CodeFlow(session: session, seller: seller, browseOnExit: browseOnExit);
 }
 
 class DeleteAccountPage extends StatelessWidget {
@@ -55,9 +62,11 @@ class _CodeFlow extends StatefulWidget {
     required this.session,
     this.deleting = false,
     this.publicPage = false,
+    this.seller = false,
+    this.browseOnExit = false,
   });
   final AccountSession session;
-  final bool deleting, publicPage;
+  final bool deleting, publicPage, seller, browseOnExit;
   @override
   State<_CodeFlow> createState() => _CodeFlowState();
 }
@@ -151,7 +160,12 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(widget.deleting ? 'Borrar cuenta' : 'Acceso UTB'),
+      title: widget.deleting
+          ? const Text('Borrar cuenta')
+          : ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 265),
+              child: const Brand(),
+            ),
     ),
     body: SafeArea(
       child: PageBody(
@@ -163,8 +177,11 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
               subtitle: 'La cuenta asociada al correo ya no está activa.',
             ),
             FilledButton(
-              onPressed: () =>
-                  Navigator.popUntil(context, (route) => route.isFirst),
+              onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/vitrina',
+                (_) => false,
+              ),
               child: const Text('Volver a la vitrina'),
             ),
           ] else ...[
@@ -198,6 +215,8 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
                   ? 'Escribe el código de 6 dígitos que enviamos a $address. Vence en 10 minutos.'
                   : widget.deleting
                   ? 'Se borrarán tu perfil, tienda, productos y fotos. El historial de otras personas conservará los pedidos sin tus datos de cuenta. Esta acción es definitiva.'
+                  : widget.seller
+                  ? 'Entra con tu correo UTB para crear o gestionar tu tienda. Te enviaremos un código de 6 dígitos.'
                   : 'Te enviaremos un código de 6 dígitos para entrar.',
             ),
             Form(
@@ -298,8 +317,16 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
             ),
             if (!widget.deleting)
               TextButton(
-                onPressed: busy ? null : () => Navigator.pop(context),
-                child: const Text('Ver la vitrina'),
+                onPressed: busy
+                    ? null
+                    : () {
+                        if (widget.browseOnExit) {
+                          Navigator.pushReplacementNamed(context, '/vitrina');
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
+                child: Text(widget.browseOnExit ? 'Ver la vitrina' : 'Volver'),
               ),
           ],
         ],
@@ -310,13 +337,19 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
 
 Future<bool> ensureInstitutionalProfile(
   BuildContext context,
-  AccountSession session,
-) async {
+  AccountSession session, {
+  bool seller = false,
+  bool browseOnExit = false,
+}) async {
   if (!session.signedIn) {
     await Navigator.push(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => InstitutionalLogin(session: session),
+        builder: (_) => InstitutionalLogin(
+          session: session,
+          seller: seller,
+          browseOnExit: browseOnExit,
+        ),
       ),
     );
   }
@@ -331,6 +364,7 @@ Future<bool> ensureInstitutionalProfile(
             child: ProfileForm(
               session: session,
               onCompleted: () => Navigator.pop(context),
+              onSignedOut: () => Navigator.pop(context),
             ),
           ),
         ),
@@ -341,9 +375,15 @@ Future<bool> ensureInstitutionalProfile(
 }
 
 class ProfileForm extends StatefulWidget {
-  const ProfileForm({super.key, required this.session, this.onCompleted});
+  const ProfileForm({
+    super.key,
+    required this.session,
+    this.onCompleted,
+    this.onSignedOut,
+  });
   final AccountSession session;
   final VoidCallback? onCompleted;
+  final VoidCallback? onSignedOut;
   @override
   State<ProfileForm> createState() => _ProfileFormState();
 }
@@ -494,8 +534,14 @@ class _ProfileFormState extends State<ProfileForm>
             label: const Text('Política de privacidad'),
           ),
         OutlinedButton(
-          onPressed: busy ? null : () => run(widget.session.signOut),
-          child: const Text('Salir'),
+          onPressed: busy
+              ? null
+              : () async {
+                  if (await run(widget.session.signOut) && mounted) {
+                    widget.onSignedOut?.call();
+                  }
+                },
+          child: const Text('Cerrar sesión'),
         ),
         const SizedBox(height: 8),
         TextButton(
