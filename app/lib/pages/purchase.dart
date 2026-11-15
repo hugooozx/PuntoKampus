@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../api/account_api.dart';
 import '../api/account_session.dart';
 import '../api/catalog_api.dart';
+import '../ui/catalog_cards.dart';
 import '../ui/kampus_design.dart';
 import 'institutional_account.dart';
 
@@ -89,16 +90,30 @@ class CartButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cart = PurchaseScope.of(context).cart;
+    final compact =
+        MediaQuery.sizeOf(context).width < 520 &&
+        MediaQuery.textScalerOf(context).scale(14) > 20;
     return ListenableBuilder(
       listenable: cart,
-      builder: (context, _) => TextButton.icon(
-        icon: const Icon(Icons.shopping_cart_outlined),
-        label: Text(cart.count == 0 ? 'Carrito' : 'Carrito (${cart.count})'),
-        onPressed: () => Navigator.push(
+      builder: (context, _) {
+        final label = cart.count == 0 ? 'Carrito' : 'Carrito (${cart.count})';
+        void open() => Navigator.push(
           context,
           MaterialPageRoute<void>(builder: (_) => const _CartPage()),
-        ),
-      ),
+        );
+        const icon = Icon(Icons.shopping_cart_outlined);
+        return compact
+            ? IconButton(
+                tooltip: label,
+                onPressed: open,
+                icon: Badge(
+                  isLabelVisible: cart.count > 0,
+                  backgroundColor: orange,
+                  child: icon,
+                ),
+              )
+            : TextButton.icon(icon: icon, label: Text(label), onPressed: open);
+      },
     );
   }
 }
@@ -114,7 +129,7 @@ class _ProductPurchaseState extends State<ProductPurchase> {
   int quantity = 1;
   int get maximum => _quantityLimit(widget.product);
 
-  Future<void> _add(PurchaseCart cart) async {
+  Future<void> _add(PurchaseCart cart, int selected) async {
     if (cart.shop != null && cart.shop!.id != widget.shop.id) {
       final replace = await showDialog<bool>(
         context: context,
@@ -138,7 +153,7 @@ class _ProductPurchaseState extends State<ProductPurchase> {
       if (!mounted || replace != true) return;
       cart.clear();
     }
-    if (cart.quantity(widget.product.id) + quantity > maximum) {
+    if (cart.quantity(widget.product.id) + selected > maximum) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -148,7 +163,7 @@ class _ProductPurchaseState extends State<ProductPurchase> {
       );
       return;
     }
-    cart.add(widget.shop, widget.product, quantity);
+    cart.add(widget.shop, widget.product, selected);
     await Navigator.push(
       context,
       MaterialPageRoute<void>(builder: (_) => const _CartPage()),
@@ -159,39 +174,76 @@ class _ProductPurchaseState extends State<ProductPurchase> {
   Widget build(BuildContext context) {
     final scope = PurchaseScope.of(context);
     return ListenableBuilder(
-      listenable: scope.session,
+      listenable: Listenable.merge([scope.session, scope.cart]),
       builder: (context, _) {
         final ownShop =
             (scope.session.user?['tienda'] as Json?)?['id'] == widget.shop.id;
         if (ownShop) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (widget.product.available) ...[
-              const Text(
-                'Cantidad',
-                style: TextStyle(fontWeight: FontWeight.w700),
+        final alreadyAdded = scope.cart.quantity(widget.product.id);
+        final remaining = maximum - alreadyAdded;
+        final canAdd = widget.product.available && remaining > 0;
+        final selected = quantity.clamp(1, max(1, remaining)).toInt();
+        return _Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (canAdd) ...[
+                const Text(
+                  'Cantidad',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _Quantity(
+                      value: selected,
+                      maximum: remaining,
+                      onChanged: (value) => setState(() => quantity = value),
+                    ),
+                    Text(
+                      alreadyAdded == 0
+                          ? 'Máximo $maximum por producto'
+                          : 'En el carrito: $alreadyAdded',
+                      style: const TextStyle(fontSize: 14, color: muted),
+                    ),
+                  ],
+                ),
+                const Divider(height: 28),
+                Semantics(
+                  liveRegion: true,
+                  child: Row(
+                    children: [
+                      const Expanded(child: Text('Subtotal')),
+                      Expanded(
+                        child: Text(
+                          _money(_cents(widget.product.price) * selected),
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ] else if (widget.product.available) ...[
+                const Text(
+                  'Ya tienes el máximo disponible de este producto en el carrito.',
+                ),
+                const SizedBox(height: 12),
+              ],
+              FilledButton.icon(
+                onPressed: canAdd ? () => _add(scope.cart, selected) : null,
+                icon: const Icon(Icons.add_shopping_cart_outlined),
+                label: const Text('Agregar al carrito'),
               ),
-              const SizedBox(height: 4),
-              _Quantity(
-                value: quantity,
-                maximum: maximum,
-                onChanged: (value) => setState(() => quantity = value),
-              ),
-              const SizedBox(height: 8),
-              _Total(
-                label: 'Subtotal',
-                amount: _money(_cents(widget.product.price) * quantity),
-              ),
-              const SizedBox(height: 12),
             ],
-            FilledButton(
-              onPressed: widget.product.available
-                  ? () => _add(scope.cart)
-                  : null,
-              child: const Text('Agregar al carrito'),
-            ),
-          ],
+          ),
         );
       },
     );
@@ -207,28 +259,36 @@ class _Quantity extends StatelessWidget {
   final int value, maximum;
   final ValueChanged<int> onChanged;
   @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      IconButton.outlined(
-        tooltip: 'Reducir cantidad',
-        icon: const Icon(Icons.remove),
-        onPressed: value > 1 ? () => onChanged(value - 1) : null,
-      ),
-      SizedBox(
-        width: 38,
-        child: Text(
-          '$value',
-          textAlign: TextAlign.center,
-          semanticsLabel: 'Cantidad: $value',
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: canvas,
+      border: Border.all(color: line),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Reducir cantidad',
+          icon: const Icon(Icons.remove),
+          onPressed: value > 1 ? () => onChanged(value - 1) : null,
         ),
-      ),
-      IconButton.outlined(
-        tooltip: 'Aumentar cantidad',
-        icon: const Icon(Icons.add),
-        onPressed: value < maximum ? () => onChanged(value + 1) : null,
-      ),
-    ],
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 42),
+          child: Text(
+            '$value',
+            textAlign: TextAlign.center,
+            semanticsLabel: 'Cantidad: $value',
+            style: const TextStyle(fontWeight: FontWeight.w800),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Aumentar cantidad',
+          icon: const Icon(Icons.add),
+          onPressed: value < maximum ? () => onChanged(value + 1) : null,
+        ),
+      ],
+    ),
   );
 }
 
@@ -272,74 +332,252 @@ class _CartPageState extends State<_CartPage> {
   Widget build(BuildContext context) {
     final scope = PurchaseScope.of(context);
     final cart = scope.cart;
+    final api = scope.session.api.catalog;
     return Scaffold(
       appBar: AppBar(title: const Text('Seguir comprando')),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: cart,
-          builder: (context, _) => PageBody(
-            width: 560,
-            children: [
-              TitleBlock('Carrito', subtitle: cart.shop?.name),
-              if (cart.entries.isEmpty) const Text('Tu carrito está vacío.'),
-              for (final entry in cart.entries)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _Panel(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          entry.product.name,
+          builder: (context, _) {
+            final shop = cart.shop;
+            if (shop == null || cart.entries.isEmpty) {
+              return PageBody(
+                width: 670,
+                children: [
+                  const TitleBlock('Carrito'),
+                  StatusPanel(
+                    icon: Icons.shopping_cart_outlined,
+                    title: 'Tu carrito está vacío.',
+                    message: 'Encuentra algo que te guste en la Vitrina y agrégalo aquí.',
+                    action: FilledButton(
+                      onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        '/vitrina',
+                        (_) => false,
+                      ),
+                      child: const Text('Ir a la vitrina'),
+                    ),
+                  ),
+                ],
+              );
+            }
+            final items = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Panel(
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: SizedBox(
+                          width: 48,
+                          child: CatalogImage(
+                            api: api,
+                            url: shop.image,
+                            label: shop.name,
+                            height: 48,
+                            shop: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          shop.name,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        Text('${_money(_cents(entry.product.price))} cada uno'),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          alignment: WrapAlignment.spaceBetween,
-                          runSpacing: 8,
-                          spacing: 16,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            _Quantity(
-                              value: entry.quantity,
-                              maximum: _quantityLimit(entry.product),
-                              onChanged: (value) =>
-                                  cart.setQuantity(entry.product, value),
-                            ),
-                            Text(
-                              _money(
-                                _cents(entry.product.price) * entry.quantity,
-                              ),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
+                      ),
+                    ],
+                  ),
+                ),
+                for (final entry in cart.entries)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _CartItem(
+                      api: api,
+                      cart: cart,
+                      product: entry.product,
+                      quantity: entry.quantity,
+                    ),
+                  ),
+              ],
+            );
+            final summary = _Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    cart.count == 1 ? '1 unidad' : '${cart.count} unidades',
+                    style: const TextStyle(color: muted),
+                  ),
+                  const Divider(height: 20),
+                  Semantics(
+                    liveRegion: true,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Total',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
                         ),
-                        TextButton(
-                          onPressed: () => cart.setQuantity(entry.product, 0),
-                          child: const Text('Quitar'),
+                        Expanded(
+                          child: Text(
+                            _money(cart.total),
+                            textAlign: TextAlign.right,
+                            style: Theme.of(context).textTheme.headlineMedium
+                                ?.copyWith(fontSize: 26),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              if (cart.entries.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _Total(label: 'Total', amount: _money(cart.total)),
-                const SizedBox(height: 8),
-                const Text('Cada pedido corresponde a una sola tienda.'),
-                if (error != null) _Error(error!),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: continuing ? null : () => _continue(scope),
-                  child: const Text('Continuar'),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Cada pedido corresponde a una sola tienda.',
+                    style: TextStyle(fontSize: 14, color: muted),
+                  ),
+                  if (error != null) _Error(error!),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: continuing ? null : () => _continue(scope),
+                    child: const Text('Continuar'),
+                  ),
+                  TextButton(
+                    onPressed: continuing
+                        ? null
+                        : () => Navigator.pushReplacementNamed(
+                            context,
+                            '/t/${shop.slug}',
+                          ),
+                    child: const Text('Seguir viendo la tienda'),
+                  ),
+                ],
+              ),
+            );
+            return PageBody(
+              width: 1060,
+              children: [
+                const TitleBlock('Carrito'),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide =
+                        constraints.maxWidth >= 820 &&
+                        MediaQuery.textScalerOf(context).scale(16) <= 22;
+                    return wide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 6, child: items),
+                              const SizedBox(width: 24),
+                              Expanded(flex: 4, child: summary),
+                            ],
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              items,
+                              const SizedBox(height: 16),
+                              summary,
+                            ],
+                          );
+                  },
                 ),
               ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _CartItem extends StatelessWidget {
+  const _CartItem({
+    required this.api,
+    required this.cart,
+    required this.product,
+    required this.quantity,
+  });
+  final CatalogApi api;
+  final PurchaseCart cart;
+  final CatalogEntry product;
+  final int quantity;
+  @override
+  Widget build(BuildContext context) {
+    final price = _cents(product.price);
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 68,
+                  child: CatalogImage(
+                    api: api,
+                    url: product.image,
+                    label: product.name,
+                    height: 68,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_money(price)} cada uno',
+                      style: const TextStyle(color: muted),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 10),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _Quantity(
+                value: quantity,
+                maximum: _quantityLimit(product),
+                onChanged: (value) => cart.setQuantity(product, value),
+              ),
+              Text(
+                _money(price * quantity),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => cart.setQuantity(product, 0),
+              style: TextButton.styleFrom(foregroundColor: ink),
+              child: const Text(
+                'Quitar',
+                style: TextStyle(decoration: TextDecoration.underline),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -93,8 +93,18 @@ void main() {
 
   for (final available in [false, true]) {
     testWidgets(
-      available ? 'El carrito respeta las unidades libres del producto' : 'Abre un producto real de la API y muestra agotado sin permitir pedidos',
+      available
+          ? 'Producto y carrito respetan el stock, recalculan el total y permiten quitar'
+          : 'Abre un producto real de la API y muestra agotado sin permitir pedidos',
       (tester) async {
+        if (available) {
+          tester.view.physicalSize = const Size(320, 900);
+          tester.view.devicePixelRatio = 1;
+          tester.platformDispatcher.textScaleFactorTestValue = 2;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        }
         final shop = <String, dynamic>{
           'id': 1,
           'nombre': 'Tienda de prueba',
@@ -112,10 +122,10 @@ void main() {
           'id': 5,
           'tienda_id': 1,
           'nombre': 'Producto de prueba',
-          'descripcion': 'Producto agotado',
+          'descripcion': available ? 'Hecho en el campus' : 'Producto agotado',
           'precio': '2.00',
           'disponible': available,
-          'unidades_disponibles': available ? 1 : 0,
+          'unidades_disponibles': available ? 2 : 0,
           'fotos': [],
         };
         final requests = <String>[];
@@ -164,28 +174,40 @@ void main() {
         await tester.pumpWidget(PuntoKampusRealApp(api: api));
         await tester.pumpAndSettle();
         expect(find.text('Sacó 10'), findsOneWidget);
+        await tester.ensureVisible(find.text('Productos'));
         await tester.tap(find.text('Productos'));
         await tester.pumpAndSettle();
         await tester.ensureVisible(find.text('Producto de prueba'));
         await tester.tap(find.text('Producto de prueba'));
         await tester.pumpAndSettle();
         if (available) {
+          final increase = find.byWidgetPredicate(
+            (widget) =>
+                widget is IconButton && widget.tooltip == 'Aumentar cantidad',
+          );
+          final decrease = find.byWidgetPredicate(
+            (widget) =>
+                widget is IconButton && widget.tooltip == 'Reducir cantidad',
+          );
+          await tester.ensureVisible(increase);
+          await tester.tap(increase);
+          await tester.pumpAndSettle();
           await tester.ensureVisible(find.text('Agregar al carrito'));
           await tester.tap(find.text('Agregar al carrito'));
           await tester.pumpAndSettle();
           expect(find.text('Quitar'), findsOneWidget);
-          expect(
-            tester
-                .widget<IconButton>(
-                  find.byWidgetPredicate(
-                    (widget) =>
-                        widget is IconButton &&
-                        widget.tooltip == 'Aumentar cantidad',
-                  ),
-                )
-                .onPressed,
-            isNull,
-          );
+          expect(tester.widget<IconButton>(increase).onPressed, isNull);
+          expect(find.text(r'$4.00'), findsNWidgets(2));
+          await tester.ensureVisible(decrease);
+          await tester.tap(decrease);
+          await tester.pumpAndSettle();
+          expect(find.text(r'$2.00'), findsNWidgets(2));
+          expect(tester.widget<IconButton>(increase).onPressed, isNotNull);
+          await tester.ensureVisible(find.text('Quitar'));
+          await tester.tap(find.text('Quitar'));
+          await tester.pumpAndSettle();
+          expect(find.text('Tu carrito está vacío.'), findsOneWidget);
+          expect(find.text('Continuar'), findsNothing);
           expect(tester.takeException(), isNull);
           return;
         }
@@ -194,13 +216,18 @@ void main() {
         expect(
           tester
               .widget<FilledButton>(
-                find.widgetWithText(FilledButton, 'Agregar al carrito'),
+                find.ancestor(
+                  of: find.text('Agregar al carrito'),
+                  matching: find.byWidgetPredicate(
+                    (widget) => widget is FilledButton,
+                  ),
+                ),
               )
               .onPressed,
           isNull,
         );
-        await tester.ensureVisible(find.text('Ver tienda'));
-        await tester.tap(find.text('Ver tienda'));
+        await tester.ensureVisible(find.text('Tienda de prueba'));
+        await tester.tap(find.text('Tienda de prueba'));
         await tester.pumpAndSettle();
         expect(find.text('Entrega: Biblioteca'), findsOneWidget);
         expect(find.text('Comida'), findsWidgets);

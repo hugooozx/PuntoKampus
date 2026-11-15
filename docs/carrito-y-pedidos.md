@@ -1,8 +1,8 @@
 # Carrito y pedidos
 
-En esta computadora, ejecuta `Abrir PuntoKampus.cmd` y abre `http://127.0.0.1:8766/`. Si ya la tienes abierta, recarga con Ctrl+F5. El carrito conserva los productos mientras navegas y durante el inicio de sesión. Cada carrito corresponde a una sola tienda.
+En esta computadora, ejecuta `Abrir PuntoKampus.cmd` y abre `http://127.0.0.1:8766/vitrina`. Si ya la tienes abierta, recarga con Ctrl+F5. El carrito conserva los productos mientras navegas y durante el inicio de sesión. Cada carrito corresponde a una sola tienda.
 
-1. En **Productos**, abre un producto disponible, elige la cantidad y pulsa **Agregar al carrito**. En el carrito puedes cambiar la cantidad o quitar productos.
+1. En **Productos**, abre un producto disponible, elige la cantidad y pulsa **Agregar al carrito**. El carrito muestra la foto, el precio unitario y el importe de cada línea. Puedes cambiar la cantidad o quitar productos y ver el total actualizado.
 2. Pulsa **Continuar**. Entra con una cuenta UTB distinta de la del vendedor y completa el perfil si corresponde. En el entorno local el código queda en el log de Laravel según la [guía de acceso](acceso-y-cuenta.md).
 3. Selecciona el punto de entrega, el día, la hora y la forma de pago. La nota es opcional. Pulsa **Enviar pedido**.
 4. Anota el código que aparece en **Tu pedido quedó registrado**. Puedes pulsar **Abrir WhatsApp** si el navegador bloqueó la apertura automática. Recarga la app y abre **Mis pedidos** para comprobar que el pedido quedó guardado.

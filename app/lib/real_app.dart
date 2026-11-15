@@ -10,6 +10,7 @@ import 'ui/catalog_cards.dart';
 import 'pages/institutional_account.dart';
 import 'pages/landing_page.dart';
 import 'pages/my_shop.dart';
+import 'pages/product_detail.dart';
 import 'pages/purchase.dart';
 import 'pages/report_shop.dart';
 
@@ -865,70 +866,6 @@ class _ShopFact extends StatelessWidget {
   );
 }
 
-class _ProductGallery extends StatefulWidget {
-  const _ProductGallery({required this.api, required this.product});
-  final CatalogApi api;
-  final CatalogEntry product;
-  @override
-  State<_ProductGallery> createState() => _ProductGalleryState();
-}
-
-class _ProductGalleryState extends State<_ProductGallery> {
-  final pages = PageController();
-  int current = 0;
-  @override
-  void dispose() {
-    pages.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final photos = (widget.product.json['fotos'] as List? ?? [])
-        .map((p) => p['url'] as String)
-        .toList();
-    return Column(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: AspectRatio(
-            aspectRatio: 1.25,
-            child: photos.isEmpty
-                ? CatalogImage(api: widget.api, label: widget.product.name)
-                : PageView.builder(
-                    controller: pages,
-                    itemCount: photos.length,
-                    onPageChanged: (index) => setState(() => current = index),
-                    itemBuilder: (context, index) => CatalogImage(
-                      api: widget.api,
-                      url: photos[index],
-                      label:
-                          '${widget.product.name}, foto ${index + 1} de ${photos.length}',
-                    ),
-                  ),
-          ),
-        ),
-        if (photos.length > 1)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < photos.length; i++)
-                IconButton(
-                  tooltip: 'Ver foto ${i + 1}',
-                  onPressed: () => pages.jumpToPage(i),
-                  icon: Icon(
-                    current == i ? Icons.circle : Icons.circle_outlined,
-                    size: 10,
-                    color: current == i ? orange : muted,
-                  ),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-}
-
 class _ShopScreenState extends State<ShopScreen> {
   late Future<CatalogEntry> future = load();
 
@@ -996,83 +933,28 @@ class _ShopScreenState extends State<ShopScreen> {
               .where((p) => p.id == widget.productId)
               .firstOrNull;
           if (product == null) {
-            return const PageBody(
+            return PageBody(
               children: [
                 StatusPanel(
                   icon: Icons.inventory_2_outlined,
                   title: 'Este producto ya no está disponible',
                   message: 'Vuelve a la tienda para ver otros productos.',
+                  action: OutlinedButton(
+                    onPressed: () => Navigator.pushReplacementNamed(
+                      context,
+                      '/t/${shop.slug}',
+                    ),
+                    child: const Text('Ir a la tienda'),
+                  ),
                 ),
               ],
             );
           }
-          return PageBody(
-            width: 1040,
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final info = Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        product.name,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
-                          onPressed: () =>
-                              Navigator.pushNamed(context, '/t/${shop.slug}'),
-                          icon: const Icon(Icons.storefront_outlined),
-                          label: Text(shop.name),
-                          style: TextButton.styleFrom(
-                            foregroundColor: ink,
-                            padding: EdgeInsets.zero,
-                          ),
-                        ),
-                      ),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: KampusBadge.availability(
-                          available: product.available,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '\$${product.price}',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(product.description),
-                      const SizedBox(height: 24),
-                      ProductPurchase(shop: shop, product: product),
-                      TextButton(
-                        onPressed: () =>
-                            Navigator.pushNamed(context, '/t/${shop.slug}'),
-                        child: const Text('Ver tienda'),
-                      ),
-                    ],
-                  );
-                  final gallery = _ProductGallery(
-                    api: widget.api,
-                    product: product,
-                  );
-                  return constraints.maxWidth >= 800
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: gallery),
-                            const SizedBox(width: 40),
-                            Expanded(child: info),
-                          ],
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [gallery, const SizedBox(height: 20), info],
-                        );
-                },
-              ),
-            ],
+          return ProductDetail(
+            api: widget.api,
+            shop: shop,
+            product: product,
+            onOpenShop: () => Navigator.pushNamed(context, '/t/${shop.slug}'),
           );
         }
         final categoryNames =
