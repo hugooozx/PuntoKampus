@@ -2,7 +2,7 @@
 
 ## Recorrido local
 
-1. Entra a la app como vendedor y abre **Mi tienda → Premium**. Con los datos ficticios locales, carga una imagen de prueba, un número nuevo y un monto de 3,00. Usa estos datos solo para simular la solicitud.
+1. Entra a la app como vendedor y abre **Mi tienda → Premium**. Con los datos ficticios locales, carga una imagen de prueba, un número nuevo y el monto provisional de USD 2,50. Usa estos datos solo para simular la solicitud.
 2. En otro perfil del navegador, entra a Filament y abre **Solicitudes Premium**. Revisa la foto y el número antes de **Aprobar**. Para **Rechazar**, escribe el motivo que verá el vendedor.
 3. Vuelve a **Premium** y pulsa **Actualizar**. Al salir a **Mi tienda**, puedes elegir **Cambiar portada**. En otro perfil, verifica la insignia **Sacó 10** y la portada desde la tienda pública. Premium conserva el orden de la Vitrina.
 

@@ -72,9 +72,11 @@ class AccesoInstitucional
                 'eliminar_cuenta' => ['confirmar el borrado de tu cuenta', 'Confirma el borrado de tu cuenta PuntoKampus'],
                 default => ['entrar en PuntoKampus', 'Tu código de acceso a PuntoKampus'],
             };
-            Mail::raw("Tu código para {$accion} es {$codigo}.\n\nVence en 10 minutos. Si tú no lo pediste, ignora este correo.", function ($mensaje) use ($correo, $asunto) {
-                $mensaje->to($correo)->subject($asunto);
-            });
+            Mail::send(
+                ['html' => 'correos.codigo', 'text' => 'correos.codigo-texto'],
+                compact('accion', 'asunto', 'codigo'),
+                fn ($mensaje) => $mensaje->to($correo)->subject($asunto),
+            );
         } catch (Throwable) {
             DB::table('codigos_acceso')->where('id', $id)->update(['invalidado_en' => now()]);
             abort(503, 'No pudimos enviar el correo. Vuelve a intentarlo en un minuto.');

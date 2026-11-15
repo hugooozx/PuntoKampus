@@ -365,30 +365,7 @@ class _CartPageState extends State<_CartPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _Panel(
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(9),
-                        child: SizedBox(
-                          width: 48,
-                          child: CatalogImage(
-                            api: api,
-                            url: shop.image,
-                            label: shop.name,
-                            height: 48,
-                            shop: true,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          shop.name,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: _CartShop(api: api, shop: shop),
                 ),
                 for (final entry in cart.entries)
                   Padding(
@@ -649,8 +626,16 @@ class _DeliveryPageState extends State<_DeliveryPage> {
   Future<void> _send(PurchaseScope scope) async {
     if (sending) return;
     if (!submitted) setState(() => submitted = true);
-    if (!form.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    final invalid = form.currentState!.validateGranularly();
+    if (invalid.isNotEmpty) {
+      await Scrollable.ensureVisible(
+        invalid.first.context,
+        duration: const Duration(milliseconds: 200),
+        alignment: 0.15,
+      );
+      return;
+    }
     final delivery = _delivery(day!, minute!);
     final payload = <String, dynamic>{
       'tienda_id': scope.cart.shop!.id,
@@ -715,49 +700,43 @@ class _DeliveryPageState extends State<_DeliveryPage> {
   @override
   Widget build(BuildContext context) {
     final scope = PurchaseScope.of(context);
-    final now = DateTime.now().toUtc();
-    final hours = day == null
-        ? <int>[]
-        : [
-            for (var time = 0; time < 1440; time += 5)
-              if (minute == time || _validHour(day!, time, now)) time,
-          ];
+    final cart = scope.cart;
     return PopScope(
       canPop: !sending,
       child: Scaffold(
         appBar: AppBar(title: const Text('Volver al carrito')),
         body: SafeArea(
           child: PageBody(
-            width: 560,
+            width: 1010,
             children: [
-              TitleBlock('Entrega y pago', subtitle: scope.cart.shop?.name),
+              const TitleBlock('Entrega y pago'),
               FutureBuilder<List<CatalogOption>>(
                 future: points,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const LinearProgressIndicator(
-                      semanticsLabel: 'Cargando puntos de entrega',
+                    return const StatusPanel(
+                      icon: Icons.location_on_outlined,
+                      title: 'Cargando puntos de entrega…',
+                      message: 'En un momento podrás elegir dónde recibir tu pedido.',
+                      busy: true,
                     );
                   }
                   final options = snapshot.data ?? [];
                   if (options.isEmpty) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          snapshot.hasError
-                              ? 'No pudimos cargar los puntos de entrega.'
-                              : 'Aún no hay puntos de entrega activos.',
-                        ),
-                        OutlinedButton(
-                          onPressed: () => setState(
-                            () => points = scope.session.api.catalog.options(
-                              'puntos-entrega',
-                            ),
+                    return StatusPanel(
+                      icon: Icons.location_off_outlined,
+                      title: snapshot.hasError
+                          ? 'No pudimos cargar los puntos de entrega'
+                          : 'Aún no hay puntos de entrega activos',
+                      message: 'Puedes reintentar o volver al carrito.',
+                      action: OutlinedButton(
+                        onPressed: () => setState(
+                          () => points = scope.session.api.catalog.options(
+                            'puntos-entrega',
                           ),
-                          child: const Text('Reintentar'),
                         ),
-                      ],
+                        child: const Text('Reintentar'),
+                      ),
                     );
                   }
                   return Form(
@@ -765,150 +744,78 @@ class _DeliveryPageState extends State<_DeliveryPage> {
                     autovalidateMode: submitted
                         ? AutovalidateMode.onUserInteraction
                         : AutovalidateMode.disabled,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        DropdownButtonFormField<int>(
-                          initialValue: point,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            labelText: 'Punto de entrega',
-                            errorText: pointError,
-                          ),
-                          items: [
-                            for (final value in options)
-                              DropdownMenuItem(
-                                value: value.id,
-                                child: Text(value.name),
-                              ),
-                          ],
-                          onChanged: sending
-                              ? null
-                              : (value) => setState(() {
-                                  point = value;
-                                  pointError = null;
-                                }),
-                          validator: (value) => value == null
-                              ? 'Selecciona un punto de entrega.'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        FormField<DateTime>(
-                          validator: (_) =>
-                              day == null ? 'Selecciona un día.' : null,
-                          builder: (field) => Column(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final wide =
+                            constraints.maxWidth >= 800 &&
+                            MediaQuery.textScalerOf(context).scale(16) <= 20;
+                        final fields = _checkoutFields(options);
+                        final summary = _Panel(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              OutlinedButton.icon(
-                                onPressed: sending
+                              if (cart.shop case final shop?)
+                                _CartShop(
+                                  api: scope.session.api.catalog,
+                                  shop: shop,
+                                ),
+                              const Divider(height: 24),
+                              for (final entry in cart.entries)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: _OrderAmount(
+                                    label:
+                                        '${entry.quantity} × ${entry.product.name}',
+                                    amount: _money(
+                                      _cents(entry.product.price) *
+                                          entry.quantity,
+                                    ),
+                                  ),
+                                ),
+                              const Divider(height: 20),
+                              _OrderAmount(
+                                label: 'Total',
+                                amount: _money(cart.total),
+                                total: true,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Pagarás directamente a la tienda. Al registrar el pedido intentaremos abrir WhatsApp.',
+                                style: TextStyle(color: muted, height: 1.4),
+                              ),
+                              if (error != null) _Error(error!),
+                              const SizedBox(height: 16),
+                              FilledButton(
+                                onPressed: sending || cart.shop == null
                                     ? null
-                                    : () async {
-                                        await _chooseDay();
-                                        if (mounted) field.didChange(day);
-                                      },
-                                icon: const Icon(Icons.event_outlined),
-                                label: Text(
-                                  day == null
-                                      ? 'Elegir día'
-                                      : 'Día: ${_day(day!)}',
+                                    : () => _send(scope),
+                                child: Text(
+                                  sending
+                                      ? 'Guardando pedido…'
+                                      : 'Enviar pedido',
                                 ),
                               ),
-                              if (field.hasError) _Error(field.errorText!),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        DropdownButtonFormField<int>(
-                          key: ValueKey(day),
-                          initialValue: hours.contains(minute) ? minute : null,
-                          isExpanded: true,
-                          menuMaxHeight: 300,
-                          decoration: InputDecoration(
-                            labelText: 'Hora de entrega',
-                            errorText: timeError,
-                          ),
-                          items: [
-                            for (final value in hours)
-                              DropdownMenuItem(
-                                value: value,
-                                child: Text(_time(value)),
-                              ),
-                          ],
-                          onChanged: sending || hours.isEmpty
-                              ? null
-                              : (value) => setState(() {
-                                  minute = value;
-                                  timeError = null;
-                                }),
-                          validator: (value) {
-                            if (day == null ||
-                                minute == null ||
-                                value == null) {
-                              return 'Selecciona una hora.';
-                            }
-                            return _validHour(
-                                  day!,
-                                  minute!,
-                                  DateTime.now().toUtc(),
-                                )
-                                ? null
-                                : 'Elige una hora que siga disponible.';
-                          },
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Desde 30 minutos hasta 7 días. Hora de Ecuador continental.',
-                          style: TextStyle(color: muted, fontSize: 14),
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: payment,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Forma de pago',
-                          ),
-                          items: [
-                            for (final value in _payments.entries)
-                              DropdownMenuItem(
-                                value: value.key,
-                                child: Text(value.value),
-                              ),
-                          ],
-                          onChanged: sending
-                              ? null
-                              : (value) => setState(() => payment = value),
-                          validator: (value) => value == null
-                              ? 'Selecciona cómo vas a pagar.'
-                              : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: note,
-                          enabled: !sending,
-                          maxLength: 200,
-                          maxLines: 3,
-                          maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                          decoration: const InputDecoration(
-                            labelText: 'Nota (opcional)',
-                          ),
-                        ),
-                        _Total(
-                          label: 'Total',
-                          amount: _money(scope.cart.total),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text('Pagarás directamente a la tienda.'),
-                        if (error != null) _Error(error!),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: sending || scope.cart.shop == null
-                              ? null
-                              : () => _send(scope),
-                          child: Text(
-                            sending ? 'Guardando pedido…' : 'Enviar pedido',
-                          ),
-                        ),
-                      ],
+                        );
+                        return wide
+                            ? Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(flex: 6, child: fields),
+                                  const SizedBox(width: 24),
+                                  Expanded(flex: 4, child: summary),
+                                ],
+                              )
+                            : Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  fields,
+                                  const SizedBox(height: 16),
+                                  summary,
+                                ],
+                              );
+                      },
                     ),
                   );
                 },
@@ -917,6 +824,202 @@ class _DeliveryPageState extends State<_DeliveryPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _checkoutFields(List<CatalogOption> options) {
+    final now = DateTime.now().toUtc();
+    final hours = day == null
+        ? <int>[]
+        : [
+            for (var time = 0; time < 1440; time += 5)
+              if (minute == time || _validHour(day!, time, now)) time,
+          ];
+    final dayField = FormField<DateTime>(
+      validator: (_) => day == null ? 'Selecciona un día.' : null,
+      builder: (field) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Día de entrega',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          OutlinedButton.icon(
+            onPressed: sending
+                ? null
+                : () async {
+                    await _chooseDay();
+                    if (mounted) field.didChange(day);
+                  },
+            icon: const Icon(Icons.event_outlined),
+            label: Text(day == null ? 'Elegir día' : 'Día: ${_day(day!)}'),
+          ),
+          if (field.hasError) _Error(field.errorText!),
+        ],
+      ),
+    );
+    final hourField = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Hora de entrega',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<int>(
+          key: ValueKey(day),
+          initialValue: hours.contains(minute) ? minute : null,
+          isExpanded: true,
+          menuMaxHeight: 300,
+          decoration: InputDecoration(
+            errorText: timeError,
+            hintText: day == null ? 'Elige un día primero' : 'Elegir hora',
+          ),
+          items: [
+            for (final value in hours)
+              DropdownMenuItem(value: value, child: Text(_time(value))),
+          ],
+          onChanged: sending || hours.isEmpty
+              ? null
+              : (value) => setState(() {
+                  minute = value;
+                  timeError = null;
+                }),
+          validator: (value) {
+            if (day == null || value == null) return 'Selecciona una hora.';
+            return _validHour(day!, value, DateTime.now().toUtc())
+                ? null
+                : 'Elige una hora que siga disponible.';
+          },
+        ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Entrega en el campus',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<int>(
+                initialValue: point,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: 'Punto de entrega',
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                  errorText: pointError,
+                ),
+                items: [
+                  for (final value in options)
+                    DropdownMenuItem(value: value.id, child: Text(value.name)),
+                ],
+                onChanged: sending
+                    ? null
+                    : (value) => setState(() {
+                        point = value;
+                        pointError = null;
+                      }),
+                validator: (value) =>
+                    value == null ? 'Selecciona un punto de entrega.' : null,
+              ),
+              const SizedBox(height: 16),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final inline =
+                      constraints.maxWidth >= 315 &&
+                      MediaQuery.textScalerOf(context).scale(16) <= 20;
+                  return inline
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: dayField),
+                            const SizedBox(width: 12),
+                            Expanded(child: hourField),
+                          ],
+                        )
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            dayField,
+                            const SizedBox(height: 12),
+                            hourField,
+                          ],
+                        );
+                },
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Desde 30 minutos hasta 7 días. Hora de Ecuador continental.',
+                style: TextStyle(color: muted, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Panel(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Forma de pago',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 6),
+              FormField<String>(
+                initialValue: payment,
+                validator: (value) =>
+                    value == null ? 'Selecciona cómo vas a pagar.' : null,
+                builder: (field) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    RadioGroup<String>(
+                      groupValue: field.value,
+                      onChanged: (value) {
+                        field.didChange(value);
+                        payment = value;
+                      },
+                      child: Column(
+                        children: [
+                          for (final option in _payments.entries)
+                            RadioListTile<String>(
+                              value: option.key,
+                              enabled: !sending,
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(option.value),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (field.hasError) _Error(field.errorText!),
+                  ],
+                ),
+              ),
+              const Divider(height: 22),
+              TextFormField(
+                controller: note,
+                enabled: !sending,
+                maxLength: 200,
+                minLines: 2,
+                maxLines: 3,
+                maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                decoration: const InputDecoration(
+                  labelText: 'Nota (opcional)',
+                  alignLabelWithHint: true,
+                ),
+                validator: (value) => (value?.trim().runes.length ?? 0) > 200
+                    ? 'La nota admite hasta 200 caracteres.'
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -940,69 +1043,189 @@ class _OrderSent extends StatelessWidget {
   const _OrderSent({required this.order, required this.whatsapp});
   final Json order;
   final Uri? whatsapp;
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Pedido enviado')),
-    body: SafeArea(
-      child: PageBody(
-        width: 560,
-        children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Icon(Icons.check_circle_outline, size: 42, color: greenInk),
-          ),
-          const SizedBox(height: 10),
-          const TitleBlock(
-            'Tu pedido quedó registrado',
-            subtitle: 'Termina de enviarlo por WhatsApp.',
-          ),
-          _OrderSummary(order: order),
-          const SizedBox(height: 8),
-          for (final item in (order['items'] as List).cast<Json>())
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                '${item['cantidad']} × ${item['nombre_producto']} · \$${item['subtotal']}',
-              ),
+  Widget build(BuildContext context) {
+    final local = _ecuador(DateTime.parse('${order['hora_entrega']}Z'));
+    final shop = order['tienda'] as String? ?? 'Tienda eliminada';
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pedido enviado')),
+      body: SafeArea(
+        child: PageBody(
+          width: 600,
+          children: [
+            Column(
+              children: [
+                const CircleAvatar(
+                  radius: 27,
+                  backgroundColor: softGreen,
+                  foregroundColor: greenInk,
+                  child: Icon(Icons.check, size: 32),
+                ),
+                const SizedBox(height: 12),
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Tu pedido quedó registrado',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SelectableText(
+                  order['codigo'] as String,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                _OrderBadge(state: order['estado']),
+                const SizedBox(height: 12),
+                if (whatsapp != null)
+                  const Text(
+                    'Confirma el pedido con la tienda por WhatsApp.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: muted),
+                  ),
+              ],
             ),
-          const SizedBox(height: 12),
-          if (whatsapp != null)
-            FilledButton.icon(
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Abrir WhatsApp'),
-              onPressed: () async {
-                if (!await _openWhatsApp(whatsapp!) && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'No pudimos abrir WhatsApp. Inténtalo de nuevo.',
+            const SizedBox(height: 16),
+            _Panel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _OrderFact(
+                    icon: Icons.storefront_outlined,
+                    child: Text(
+                      shop,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  const Divider(height: 22),
+                  for (final item in (order['items'] as List).cast<Json>())
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _OrderAmount(
+                        label:
+                            '${item['cantidad']} × ${item['nombre_producto']}',
+                        amount: '\$${item['subtotal']}',
                       ),
                     ),
-                  );
-                }
-              },
-            )
-          else
-            const Text(
-              'La tienda ya no tiene un WhatsApp disponible para abrir.',
-            ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => Scaffold(
-                  appBar: AppBar(),
-                  body: const SafeArea(child: BuyerOrders(visible: true)),
-                ),
+                  _OrderAmount(
+                    label: 'Total',
+                    amount: '\$${order['total']}',
+                    total: true,
+                  ),
+                  const Divider(height: 22),
+                  _OrderFact(
+                    icon: Icons.location_on_outlined,
+                    child: Text(order['punto_entrega'] as String),
+                  ),
+                  const SizedBox(height: 8),
+                  _OrderFact(
+                    icon: Icons.event_outlined,
+                    child: Text(
+                      '${_day(local)} · ${_time(local.hour * 60 + local.minute)}',
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _OrderFact(
+                    icon: Icons.payments_outlined,
+                    child: Text(_payments[order['forma_pago']] ?? ''),
+                  ),
+                  if (order['nota'] case final String note
+                      when note.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    _OrderFact(icon: Icons.notes_outlined, child: Text(note)),
+                  ],
+                ],
               ),
             ),
-            child: const Text('Ver mis pedidos'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            if (whatsapp != null) ...[
+              FilledButton.icon(
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Abrir WhatsApp'),
+                onPressed: () async {
+                  if (!await _openWhatsApp(whatsapp!) && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'No pudimos abrir WhatsApp. Inténtalo de nuevo.',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+            ] else ...[
+              const Text(
+                'La tienda ya no tiene un WhatsApp disponible para abrir.',
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(),
+                    body: const SafeArea(child: BuyerOrders(visible: true)),
+                  ),
+                ),
+              ),
+              child: const Text('Ver mis pedidos'),
+            ),
+          ],
+        ),
       ),
-    ),
+    );
+  }
+}
+
+class _OrderFact extends StatelessWidget {
+  const _OrderFact({required this.icon, required this.child});
+  final IconData icon;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 21, color: muted),
+      const SizedBox(width: 10),
+      Expanded(child: child),
+    ],
   );
+}
+
+class _OrderAmount extends StatelessWidget {
+  const _OrderAmount({
+    required this.label,
+    required this.amount,
+    this.total = false,
+  });
+  final String label, amount;
+  final bool total;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = total ? Theme.of(context).textTheme.titleLarge : null;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: Text(label, style: style)),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            amount,
+            textAlign: TextAlign.end,
+            style: style ?? const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class BuyerOrders extends StatelessWidget {
@@ -1247,18 +1470,6 @@ class _OrderSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final local = _ecuador(DateTime.parse('${order['hora_entrega']}Z'));
-    final status = switch (order['estado']) {
-      'pendiente' => 'Pendiente',
-      'entregado' => 'Entregado',
-      'cancelado' => 'Cancelado',
-      _ => 'Vencido',
-    };
-    final (foreground, background) = switch (order['estado']) {
-      'pendiente' => (orange, const Color(0xFFFFECD9)),
-      'entregado' => (greenInk, const Color(0xFFE8F3E7)),
-      'cancelado' => (muted, const Color(0xFFEEECE8)),
-      _ => (const Color(0xFF52385E), const Color(0xFFEADDF3)),
-    };
     final details = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1304,22 +1515,7 @@ class _OrderSummary extends StatelessWidget {
             order['codigo'] as String,
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              child: Text(
-                status,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: foreground,
-                ),
-              ),
-            ),
-          ),
+          _OrderBadge(state: order['estado']),
           const SizedBox(height: 8),
           if (!seller)
             Text(
@@ -1350,6 +1546,51 @@ class _OrderSummary extends StatelessWidget {
   }
 }
 
+class _OrderBadge extends StatelessWidget {
+  const _OrderBadge({required this.state});
+  final String state;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, tone, tint) = switch (state) {
+      'pendiente' => ('Pendiente', orange, const Color(0xFFFFECD9)),
+      'entregado' => ('Entregado', greenInk, const Color(0xFFE8F3E7)),
+      'cancelado' => ('Cancelado', muted, const Color(0xFFEEECE8)),
+      _ => ('Vencido', const Color(0xFF52385E), const Color(0xFFEADDF3)),
+    };
+    return KampusBadge(label: label, background: tint, foreground: tone);
+  }
+}
+
+class _CartShop extends StatelessWidget {
+  const _CartShop({required this.api, required this.shop});
+  final CatalogApi api;
+  final CatalogEntry shop;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(9),
+        child: SizedBox(
+          width: 48,
+          child: CatalogImage(
+            api: api,
+            url: shop.image,
+            label: shop.name,
+            height: 48,
+            shop: true,
+          ),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(shop.name, style: Theme.of(context).textTheme.titleMedium),
+      ),
+    ],
+  );
+}
+
 class _Panel extends StatelessWidget {
   const _Panel({required this.child});
   final Widget child;
@@ -1361,25 +1602,6 @@ class _Panel extends StatelessWidget {
       border: Border.all(color: line),
     ),
     child: Padding(padding: const EdgeInsets.all(14), child: child),
-  );
-}
-
-class _Total extends StatelessWidget {
-  const _Total({required this.label, required this.amount});
-  final String label, amount;
-  @override
-  Widget build(BuildContext context) => _Panel(
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-        ),
-        Text(amount, style: const TextStyle(fontWeight: FontWeight.w800)),
-      ],
-    ),
   );
 }
 

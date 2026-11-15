@@ -153,6 +153,9 @@ class _RealShellState extends State<RealShell> {
 
   void _returnAfterLogout() {
     PurchaseScope.of(context).cart.clear();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Cerraste sesión en PuntoKampus.')),
+    );
     if (widget.publicLanding) {
       _home();
     } else {
@@ -164,6 +167,29 @@ class _RealShellState extends State<RealShell> {
     if (leaving) return;
     setState(() => leaving = true);
     try {
+      if (PurchaseScope.of(context).cart.count > 0) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            icon: const Icon(Icons.logout),
+            title: const Text('¿Cerrar sesión?'),
+            content: const Text(
+              'Al salir se vaciará el carrito de este dispositivo.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Seguir aquí'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Cerrar sesión'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+      }
       await widget.session.signOut();
       if (mounted) _returnAfterLogout();
     } on ApiFailure catch (failure) {
@@ -221,7 +247,7 @@ class _RealShellState extends State<RealShell> {
       return Scaffold(
         appBar: AppBar(title: const Text('Acceso UTB')),
         body: SafeArea(
-          child: ProfileForm(session: session, onSignedOut: _returnAfterLogout),
+          child: ProfileForm(session: session, onSignOut: _logout),
         ),
       );
     }
@@ -249,7 +275,7 @@ class _RealShellState extends State<RealShell> {
               session.user!['mostrar_whatsapp'] != null,
             )),
             session: session,
-            onSignedOut: _returnAfterLogout,
+            onSignOut: _logout,
           ),
       ],
     );
@@ -380,7 +406,9 @@ class _RealShellState extends State<RealShell> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
-                          subtitle: const Text('Mi cuenta'),
+                          subtitle: Text(
+                            leaving ? 'Cerrando sesión…' : 'Mi cuenta',
+                          ),
                           trailing: const Icon(Icons.expand_more),
                         ),
                       )

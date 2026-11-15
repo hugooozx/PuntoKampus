@@ -14,6 +14,7 @@ Route::prefix('v1')->group(function () {
     Route::get('privacidad', fn () => [
         'responsable' => config('puntokampus.responsable'),
         'contacto' => config('puntokampus.contacto'),
+        'actualizada_en' => config('puntokampus.privacidad_actualizada_en'),
     ]);
     Route::middleware('throttle:60,1')->group(function () {
         Route::post('auth/codigo', [CuentaController::class, 'pedirCodigo']);

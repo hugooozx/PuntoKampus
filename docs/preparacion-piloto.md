@@ -5,12 +5,12 @@
 | Dato | Dónde se configura | Cómo comprobarlo |
 | --- | --- | --- |
 | Correo de soporte | `PK_CORREO_SOPORTE` en Laravel | El dueño de una tienda de prueba dada de baja puede usar **Escribir al equipo** desde **Mi tienda**. |
-| Responsable y contacto de privacidad | `PK_RESPONSABLE_DATOS` y `PK_CORREO_PRIVACIDAD` en Laravel | Abrir `/privacidad` sin cuenta, verificar el nombre, probar el enlace de correo y abrir el formulario de borrado. El equipo revisa el texto y fija la fecha de actualización antes de publicarlo. |
+| Responsable, contacto y fecha de privacidad | `PK_RESPONSABLE_DATOS`, `PK_CORREO_PRIVACIDAD` y `PK_PRIVACIDAD_ACTUALIZADA_EN` (formato `AAAA-MM-DD`) en Laravel | Abrir `/privacidad` sin cuenta, verificar el nombre y la fecha, probar el enlace de correo y abrir el formulario de borrado. El equipo revisa el texto antes de publicarlo. |
 | Remitente y servicio de correo | `MAIL_MAILER=smtp`, parámetros `MAIL_*` y remitente autorizado, según el servicio elegido | Probar el acceso con tres correos UTB reales de participantes y anotar el tiempo de entrega y si llega a spam. Los secretos se configuran directamente en el servidor. |
 | Periodo académico y cobro Premium | `configuraciones`, `periodos_academicos` y `cuentas_bancarias` en PostgreSQL | Confirmar fechas, precio, titular, banco, tipo y número de cuenta, Deuna si aplica y plazo de conservación de comprobantes. Revisar **Premium** con una cuenta vendedora. |
 | Dirección web para los participantes | Web y API de prueba accesibles mediante HTTPS | Abrir la portada, una tienda, `/privacidad` y `/borrar-cuenta` directamente desde otro celular. |
 
-El entorno local usa el modo de registro de correo. Los cobros de ejemplo son ficticios. Para el recorrido de usabilidad se pueden usar tiendas y pedidos de prueba, con el envío por WhatsApp y el flujo de pago detenidos en la pantalla de revisión.
+El entorno local usa el modo de registro de correo. El precio provisional de Premium es **USD 2,50**. La cuenta de cobro y el periodo de esta computadora son ficticios. Las facultades, carreras, semestres y puntos de entrega definitivos se cargarán cuando el equipo los confirme. Para el recorrido de usabilidad se pueden usar tiendas y pedidos de prueba, con el envío por WhatsApp y el flujo de pago detenidos en la pantalla de revisión.
 
 ## Ensayo local
 

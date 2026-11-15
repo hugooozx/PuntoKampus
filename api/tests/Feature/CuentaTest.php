@@ -20,6 +20,8 @@ class CuentaTest extends TestCase
         $mensaje = Mail::mailer('array')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
         $this->assertMatchesRegularExpression('/\b\d{6}\b/', $mensaje->getTextBody());
         preg_match('/\b\d{6}\b/', $mensaje->getTextBody(), $codigo);
+        $this->assertStringContainsString($codigo[0], $mensaje->getHtmlBody());
+        $this->assertStringContainsString('Vence en 10 minutos.', $mensaje->getHtmlBody());
 
         return $codigo[0];
     }
@@ -31,6 +33,15 @@ class CuentaTest extends TestCase
         return $this->postJson('/api/v1/auth/verificar', [
             'correo' => $correo, 'codigo' => $this->ultimoCodigo(), 'dispositivo' => 'Prueba',
         ])->assertOk()->json('token');
+    }
+
+    public function test_privacidad_publica_devuelve_la_fecha_configurada(): void
+    {
+        config(['puntokampus.privacidad_actualizada_en' => null]);
+        $this->getJson('/api/v1/privacidad')->assertOk()->assertJsonPath('actualizada_en', null);
+
+        config(['puntokampus.privacidad_actualizada_en' => '2026-11-15']);
+        $this->getJson('/api/v1/privacidad')->assertOk()->assertJsonPath('actualizada_en', '2026-11-15');
     }
 
     public function test_alta_exige_consentimiento_guarda_cambios_y_revoca_sesion(): void

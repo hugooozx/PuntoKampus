@@ -4,8 +4,8 @@ En esta computadora, ejecuta `Abrir PuntoKampus.cmd` y abre `http://127.0.0.1:87
 
 1. En **Productos**, abre un producto disponible, elige la cantidad y pulsa **Agregar al carrito**. El carrito muestra la foto, el precio unitario y el importe de cada línea. Puedes cambiar la cantidad o quitar productos y ver el total actualizado.
 2. Pulsa **Continuar**. Entra con una cuenta UTB distinta de la del vendedor y completa el perfil si corresponde. En el entorno local el código queda en el log de Laravel según la [guía de acceso](acceso-y-cuenta.md).
-3. Selecciona el punto de entrega, el día, la hora y la forma de pago. La nota es opcional. Pulsa **Enviar pedido**.
-4. Anota el código que aparece en **Tu pedido quedó registrado**. Puedes pulsar **Abrir WhatsApp** si el navegador bloqueó la apertura automática. Recarga la app y abre **Mis pedidos** para comprobar que el pedido quedó guardado.
+3. Selecciona el punto de entrega, el día, la hora y una de las tres formas de pago. La nota es opcional. Verifica las cantidades y el total en el resumen y pulsa **Enviar pedido**.
+4. Anota el código que aparece en **Tu pedido quedó registrado**. Ahí puedes consultar el estado, los productos, el total y la entrega. Pulsa **Abrir WhatsApp** si el navegador bloqueó la apertura automática. Recarga la app y abre **Mis pedidos** para comprobar que el pedido quedó guardado.
 
 Las cantidades van de 1 a 20 por producto. La entrega se puede programar desde 30 minutos hasta 7 días después del envío y usa la hora de Ecuador continental. La nota admite 200 caracteres. La interfaz de **Mi tienda** admite hasta 10 dígitos en el WhatsApp nacional y valida el prefijo `09`. Laravel normaliza los formatos ecuatorianos admitidos a un número internacional.
 

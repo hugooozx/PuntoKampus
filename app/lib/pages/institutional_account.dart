@@ -381,10 +381,12 @@ class ProfileForm extends StatefulWidget {
     required this.session,
     this.onCompleted,
     this.onSignedOut,
+    this.onSignOut,
   });
   final AccountSession session;
   final VoidCallback? onCompleted;
   final VoidCallback? onSignedOut;
+  final Future<void> Function()? onSignOut;
   @override
   State<ProfileForm> createState() => _ProfileFormState();
 }
@@ -397,6 +399,7 @@ class _ProfileFormState extends State<ProfileForm>
   );
   late bool? whatsapp = widget.session.user?['mostrar_whatsapp'] as bool?;
   bool accepted = false;
+  bool closing = false;
   String? success;
 
   @override
@@ -534,15 +537,21 @@ class _ProfileFormState extends State<ProfileForm>
             icon: const Icon(Icons.description_outlined),
             label: const Text('Política de privacidad'),
           ),
-        OutlinedButton(
+        OutlinedButton.icon(
           onPressed: busy
               ? null
               : () async {
-                  if (await run(widget.session.signOut) && mounted) {
-                    widget.onSignedOut?.call();
+                  setState(() => closing = true);
+                  final closed = await run(
+                    widget.onSignOut ?? widget.session.signOut,
+                  );
+                  if (mounted) {
+                    setState(() => closing = false);
+                    if (closed) widget.onSignedOut?.call();
                   }
                 },
-          child: const Text('Cerrar sesión'),
+          icon: const Icon(Icons.logout),
+          label: Text(closing ? 'Cerrando sesión…' : 'Cerrar sesión'),
         ),
         const SizedBox(height: 8),
         TextButton(
@@ -617,12 +626,22 @@ class _PrivacyPageState extends State<PrivacyPage> {
                   (snapshot.data?['responsable'] as String? ?? '').trim();
               final email = (snapshot.data?['contacto'] as String? ?? '')
                   .trim();
+              final publication = DateTime.tryParse(
+                snapshot.data?['actualizada_en'] as String? ?? '',
+              );
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (responsible.isEmpty || email.isEmpty)
+                  if (responsible.isEmpty ||
+                      email.isEmpty ||
+                      publication == null)
                     const _Feedback(
-                      'Borrador para revisión. Faltan datos de contacto del piloto.',
+                      'Borrador para revisión del equipo de PuntoKampus.',
+                    ),
+                  if (publication != null)
+                    Text(
+                      'Última actualización: ${MaterialLocalizations.of(context).formatFullDate(publication)}',
+                      style: const TextStyle(color: muted),
                     ),
                   if (responsible.isNotEmpty)
                     Text('Responsable de los datos: $responsible'),

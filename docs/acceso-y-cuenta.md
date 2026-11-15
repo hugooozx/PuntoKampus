@@ -20,11 +20,11 @@ El servidor autentica el encabezado Bearer con un middleware que lee `sesiones_a
 
 | Ruta agregada (prefijo `/api/v1`) | Solicitud | Respuesta y uso |
 | --- | --- | --- |
-| `GET /privacidad` | Sin sesión | `responsable` y `contacto`, ambos anulables. Flutter los muestra en el texto de política. |
+| `GET /privacidad` | Sin sesión | `responsable`, `contacto` y `actualizada_en` (`AAAA-MM-DD` o nulo). Laravel lee la fecha de `PK_PRIVACIDAD_ACTUALIZADA_EN`. Flutter muestra la fecha cuando está disponible. Las versiones anteriores del cliente pueden ignorarla. |
 | `POST /cuentas/codigo-borrado` | `correo` | 204. Código exclusivo de borrado para el formulario web público. |
 | `DELETE /cuentas` | `correo`, `codigo` | 204. Confirma el borrado desde el formulario sin sesión. |
 
-Los códigos vencen en diez minutos y se almacenan como hashes. Se bloquea el quinto intento errado, hay un máximo de cinco envíos por hora y la API usa `Retry-After` en el límite de envíos. El borrado retira la cuenta, revoca las sesiones, cancela pedidos pendientes afectados y conserva los pedidos de la contraparte sin la relación a la cuenta o tienda borrada y sin notas libres. Los comprobantes aprobados conservan número y monto para evitar reutilización. Se retiran las fotos de los discos administrados. Los futuros servicios de subida deberán registrar URLs bajo `/storage/` en disco público y rutas relativas de comprobantes en disco privado. Activa el programador de Laravel para reintentar fallos de almacenamiento mediante `cuentas:limpiar-archivos`.
+El correo del código tiene versiones HTML y de texto sin recursos externos. Se usa para el acceso, Filament y la confirmación de borrado. Los códigos vencen en diez minutos y se almacenan como hashes. Se bloquea el quinto intento errado, hay un máximo de cinco envíos por hora y la API usa `Retry-After` en el límite de envíos. El borrado retira la cuenta, revoca las sesiones, cancela pedidos pendientes afectados y conserva los pedidos de la contraparte sin la relación a la cuenta o tienda borrada y sin notas libres. Los comprobantes aprobados conservan número y monto para evitar reutilización. Se retiran las fotos de los discos administrados. Los futuros servicios de subida deberán registrar URLs bajo `/storage/` en disco público y rutas relativas de comprobantes en disco privado. Activa el programador de Laravel para reintentar fallos de almacenamiento mediante `cuentas:limpiar-archivos`.
 
 ## Antes del piloto
 
