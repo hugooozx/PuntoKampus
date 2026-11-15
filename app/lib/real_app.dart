@@ -247,13 +247,43 @@ class _RealShellState extends State<RealShell> {
                       ),
                     ),
                     const Divider(),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        'Tu campus,\ntus emprendimientos.',
-                        style: TextStyle(color: muted, height: 1.5),
+                    if (session.user?['nombres'] case final String name)
+                      ListTile(
+                        onTap: () => setState(() => tab = 3),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor: peach,
+                          foregroundColor: orange,
+                          child: Text(
+                            name
+                                .trim()
+                                .split(RegExp(r'\s+'))
+                                .where((part) => part.isNotEmpty)
+                                .take(2)
+                                .map(
+                                  (part) => part.characters.first.toUpperCase(),
+                                )
+                                .join(),
+                          ),
+                        ),
+                        title: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        subtitle: const Text('Mi cuenta'),
+                      )
+                    else
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'Tu campus,\ntus emprendimientos.',
+                          style: TextStyle(color: muted, height: 1.5),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -403,62 +433,91 @@ class _RealCatalogState extends State<RealCatalog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (desktop)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        'EMPRENDIMIENTOS DE LA UTB',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1,
-                        ),
+                  Container(
+                    padding: EdgeInsets.all(desktop ? 24 : 14),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white,
+                          Color.lerp(canvas, peach, 0.66)!,
+                        ],
                       ),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: line),
                     ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Vitrina',
-                          style: Theme.of(context).textTheme.headlineMedium
-                              ?.copyWith(fontSize: desktop ? 44 : 32),
-                        ),
-                      ),
-                      const CartButton(),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Descubre lo que se crea en tu campus.',
-                    style: TextStyle(fontSize: desktop ? 18 : 16),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Buscar tiendas o productos',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: search,
-                    onChanged: (text) => c.filter(text: text),
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: '¿Qué estás buscando?',
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: ink,
-                        size: 26,
-                      ),
-                      suffixIcon: search.text.isEmpty
-                          ? null
-                          : IconButton(
-                              tooltip: 'Limpiar búsqueda',
-                              onPressed: () {
-                                search.clear();
-                                c.filter(text: '');
-                              },
-                              icon: const Icon(Icons.close),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (desktop)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'EMPRENDIMIENTOS DE LA UTB',
+                              style: TextStyle(
+                                color: orange,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1,
+                              ),
                             ),
+                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Vitrina',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(fontSize: desktop ? 48 : 32),
+                              ),
+                            ),
+                            const CartButton(),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Descubre lo que se crea en tu campus.',
+                          style: TextStyle(
+                            fontSize: desktop ? 18 : 16,
+                            color: muted,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'Buscar tiendas o productos',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: search,
+                          onChanged: (text) => c.filter(text: text),
+                          textInputAction: TextInputAction.search,
+                          decoration: InputDecoration(
+                            hintText: '¿Qué estás buscando?',
+                            prefixIcon: const Icon(
+                              Icons.search,
+                              color: ink,
+                              size: 26,
+                            ),
+                            suffixIcon: search.text.isEmpty
+                                ? null
+                                : IconButton(
+                                    tooltip: 'Limpiar búsqueda',
+                                    onPressed: () {
+                                      search.clear();
+                                      c.filter(text: '');
+                                    },
+                                    icon: const Icon(Icons.close),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -557,12 +616,23 @@ class _RealCatalogState extends State<RealCatalog> {
                             ),
                     )
                   else ...[
-                    Text(
-                      '${c.total} ${c.total == 1 ? (c.products ? 'producto' : 'tienda') : noun}',
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${c.total} ${c.total == 1 ? (c.products ? 'producto' : 'tienda') : noun}',
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: desktop ? 100 : 36,
+                          child: const Divider(height: 1),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     EntryGrid(

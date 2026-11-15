@@ -180,7 +180,7 @@ class _MyShopPageState extends State<MyShopPage> {
       final store = data?['tienda'] as Json?;
       final active = store?['estado'] == 'activa';
       return PageBody(
-        width: 600,
+        width: 680,
         children: [
           const TitleBlock('Mi tienda'),
           if (snapshot.connectionState == ConnectionState.waiting)
@@ -207,55 +207,117 @@ class _MyShopPageState extends State<MyShopPage> {
               label: const Text('Crear mi tienda'),
             ),
           ] else if (data != null && store != null) ...[
-            DecoratedBox(
+            Container(
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: line),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 64,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: CatalogImage(
-                          api: widget.session.api.catalog,
-                          url: store['logo_url'] as String?,
-                          label: store['nombre'] as String,
-                          height: 64,
-                          shop: true,
-                        ),
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (active && store['portada_url'] is String)
+                    CatalogImage(
+                      api: widget.session.api.catalog,
+                      url: store['portada_url'] as String,
+                      label: 'Portada de ${store['nombre']}',
+                      height: 144,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            store['nombre'] as String,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                          const SizedBox(height: 6),
-                          if (active)
-                            KampusBadge.plan(
-                              premium: store['plan'] == 'premium',
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 64,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: CatalogImage(
+                              api: widget.session.api.catalog,
+                              url: store['logo_url'] as String?,
+                              label: store['nombre'] as String,
+                              height: 64,
+                              shop: true,
                             ),
-                          Text(
-                            active
-                                ? (store['plan'] == 'premium'
-                                      ? 'Plan Premium'
-                                      : 'Plan gratis')
-                                : 'Tienda dada de baja',
                           ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                store['nombre'] as String,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.5,
+                                    ),
+                              ),
+                              const SizedBox(height: 6),
+                              if (active)
+                                KampusBadge.plan(
+                                  premium: store['plan'] == 'premium',
+                                ),
+                              Text(
+                                active
+                                    ? (store['plan'] == 'premium'
+                                          ? 'Plan Premium'
+                                          : 'Plan gratis')
+                                    : 'Tienda dada de baja',
+                              ),
+                              if (store['descripcion']
+                                  case final String description
+                                  when description.isNotEmpty)
+                                Text(
+                                  description,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: muted),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (active)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Divider(),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              TextButton.icon(
+                                onPressed: () => Navigator.pushNamed(
+                                  context,
+                                  '/t/${store['slug']}',
+                                ),
+                                icon: const Icon(Icons.visibility_outlined),
+                                label: const Text('Ver tienda en la Vitrina'),
+                              ),
+                              TextButton.icon(
+                                onPressed: uploading ? null : () => _edit(data),
+                                icon: const Icon(Icons.edit_outlined),
+                                label: const Text('Editar tienda'),
+                              ),
+                            ],
+                          ),
+                          if (kIsWeb) ...[
+                            const SizedBox(height: 8),
+                            FilledButton.icon(
+                              onPressed: () => _share(store['slug'] as String),
+                              icon: const Icon(Icons.link_outlined),
+                              label: const Text('Compartir enlace'),
+                            ),
+                          ],
                         ],
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
             if (!active) ...[
@@ -281,75 +343,79 @@ class _MyShopPageState extends State<MyShopPage> {
                   'El equipo aún no ha configurado un correo de soporte.',
                 ),
             ],
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: () => Navigator.push<void>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MyProductsPage(
-                    session: widget.session,
-                    shopName: store['nombre'] as String,
-                    onChanged: widget.onChanged,
-                  ),
-                ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: line),
               ),
-              icon: const Icon(Icons.inventory_2_outlined),
-              label: const Text('Mis productos'),
+              child: Column(
+                children: [
+                  ListTile(
+                    onTap: () => Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MyProductsPage(
+                          session: widget.session,
+                          shopName: store['nombre'] as String,
+                          onChanged: widget.onChanged,
+                        ),
+                      ),
+                    ),
+                    leading: const Icon(Icons.inventory_2_outlined),
+                    title: const Text('Mis productos'),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    leading: const Icon(Icons.receipt_long_outlined),
+                    title: const Text('Pedidos de mi tienda'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push<void>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => SellerOrdersPage(
+                          session: widget.session,
+                          shopName: store['nombre'] as String,
+                          onChanged: widget.onChanged,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  ListTile(
+                    onTap: () async {
+                      await Navigator.push<void>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PremiumPage(session: widget.session),
+                        ),
+                      );
+                      if (mounted) {
+                        _refresh();
+                        widget.onChanged();
+                      }
+                    },
+                    leading: const Icon(
+                      Icons.workspace_premium_outlined,
+                      color: goldInk,
+                    ),
+                    title: const Text('Premium'),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.receipt_long_outlined),
-              label: const Text('Pedidos de mi tienda'),
-              onPressed: () => Navigator.push<void>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SellerOrdersPage(
-                    session: widget.session,
-                    shopName: store['nombre'] as String,
-                    onChanged: widget.onChanged,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (active)
+            if (!active)
               OutlinedButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, '/t/${store['slug']}'),
-                child: const Text('Ver tienda en la Vitrina'),
+                onPressed: uploading ? null : () => _edit(data),
+                child: const Text('Editar tienda'),
               ),
-            if (active && kIsWeb) ...[
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                onPressed: () => _share(store['slug'] as String),
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Compartir enlace'),
-              ),
-            ],
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: uploading ? null : () => _edit(data),
-              child: const Text('Editar tienda'),
-            ),
             TextButton(
               onPressed: uploading ? null : () => _replaceLogo(data),
               child: Text(uploading ? 'Subiendo logo…' : 'Cambiar logo'),
-            ),
-            OutlinedButton.icon(
-              onPressed: () async {
-                await Navigator.push<void>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => PremiumPage(session: widget.session),
-                  ),
-                );
-                if (mounted) {
-                  _refresh();
-                  widget.onChanged();
-                }
-              },
-              icon: const Icon(Icons.workspace_premium_outlined),
-              label: const Text('Premium'),
             ),
             if (active && store['plan'] == 'premium')
               TextButton(

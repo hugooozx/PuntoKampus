@@ -44,9 +44,10 @@ class EntryGrid extends StatelessWidget {
               child: Card(
                 margin: EdgeInsets.zero,
                 clipBehavior: Clip.antiAlias,
-                elevation: 0,
+                elevation: 1,
                 color: Colors.white,
                 surfaceTintColor: Colors.transparent,
+                shadowColor: ink.withValues(alpha: 0.12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: const BorderSide(color: line),
@@ -55,6 +56,8 @@ class EntryGrid extends StatelessWidget {
                   button: true,
                   child: InkWell(
                     onTap: () => onOpen(entry),
+                    hoverColor: peach.withValues(alpha: 0.36),
+                    focusColor: peach.withValues(alpha: 0.65),
                     child: entry.isProduct
                         ? _ProductCard(entry: entry, api: api)
                         : _ShopCard(
@@ -113,6 +116,7 @@ class _ShopCard extends StatelessWidget {
                   label: entry.name,
                   height: detailed ? 96 : 72,
                   shop: true,
+                  fallback: _ShopCategoryTile(category: category),
                 ),
               ),
             ),
@@ -132,27 +136,33 @@ class _ShopCard extends StatelessWidget {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   KampusBadge.plan(premium: entry.premium),
                   if (category != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(top: 6),
                       child: _MetaLine(
                         icon: detailed ? Icons.sell_outlined : null,
                         text: category!,
                       ),
                     ),
-                  if (detailed && entry.description.isNotEmpty)
+                  if (detailed)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        entry.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          height: 1.4,
-                          color: muted,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight:
+                              MediaQuery.textScalerOf(context).scale(14) * 2.8,
+                        ),
+                        child: Text(
+                          entry.description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            height: 1.4,
+                            color: muted,
+                          ),
                         ),
                       ),
                     ),
@@ -175,7 +185,7 @@ class _ShopCard extends StatelessWidget {
           ],
         ),
         if (detailed) ...[
-          const Divider(height: 24),
+          const Divider(height: 28),
           const Align(
             alignment: Alignment.centerRight,
             child: _CardAction('Ver tienda'),
@@ -184,6 +194,63 @@ class _ShopCard extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _ShopCategoryTile extends StatelessWidget {
+  const _ShopCategoryTile({this.category});
+  final String? category;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = category?.toLowerCase() ?? '';
+    final (icon, tint, tone) = switch (name) {
+      _ when name.contains('postre') || name.contains('dulce') => (
+        Icons.bakery_dining_outlined,
+        peach,
+        orange,
+      ),
+      _ when name.contains('bebida') => (
+        Icons.local_cafe_outlined,
+        const Color(0xFFFBECD3),
+        goldInk,
+      ),
+      _ when name.contains('comida') => (
+        Icons.lunch_dining_outlined,
+        const Color(0xFFF8ECD4),
+        goldInk,
+      ),
+      _ when name.contains('papeler') || name.contains('útiles') => (
+        Icons.auto_stories_outlined,
+        softGreen,
+        greenInk,
+      ),
+      _ when name.contains('tecnolog') => (
+        Icons.devices_outlined,
+        const Color(0xFFE6EEF6),
+        const Color(0xFF315577),
+      ),
+      _ when name.contains('ropa') || name.contains('accesorio') => (
+        Icons.checkroom_outlined,
+        const Color(0xFFF2EAF7),
+        const Color(0xFF634677),
+      ),
+      _ => (Icons.storefront_outlined, peach, orange),
+    };
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [tint, Color.lerp(tint, tone, 0.12)!],
+          ),
+          border: Border.all(color: tone.withValues(alpha: 0.12)),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Center(child: Icon(icon, color: tone, size: 36)),
+      ),
+    );
+  }
 }
 
 class _ProductCard extends StatelessWidget {
@@ -309,25 +376,29 @@ class CatalogImage extends StatelessWidget {
     required this.label,
     this.height = 200,
     this.shop = false,
+    this.fallback,
   });
   final CatalogApi api;
   final String? url;
   final String label;
   final double height;
   final bool shop;
+  final Widget? fallback;
   @override
   Widget build(BuildContext context) {
-    Widget placeholder() => Container(
-      height: height,
-      color: shop ? peach : softGray,
-      alignment: Alignment.center,
-      child: Icon(
-        shop ? Icons.storefront_outlined : Icons.image_outlined,
-        color: shop ? orange : muted,
-        size: shop ? 32 : 40,
-        semanticLabel: 'Sin imagen',
-      ),
-    );
+    Widget placeholder() => fallback != null
+        ? SizedBox(height: height, width: double.infinity, child: fallback)
+        : Container(
+            height: height,
+            color: shop ? peach : softGray,
+            alignment: Alignment.center,
+            child: Icon(
+              shop ? Icons.storefront_outlined : Icons.image_outlined,
+              color: shop ? orange : muted,
+              size: shop ? 32 : 40,
+              semanticLabel: 'Sin imagen',
+            ),
+          );
     return url == null || url!.isEmpty
         ? placeholder()
         : Image.network(
@@ -336,6 +407,8 @@ class CatalogImage extends StatelessWidget {
             width: double.infinity,
             fit: BoxFit.cover,
             semanticLabel: label,
+            frameBuilder: (_, child, frame, synchronouslyLoaded) =>
+                synchronouslyLoaded || frame != null ? child : placeholder(),
             errorBuilder: (_, _, _) => placeholder(),
           );
   }
