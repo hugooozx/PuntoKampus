@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/link.dart';
 
 import '../api/account_api.dart';
 import '../api/account_session.dart';
@@ -583,7 +584,10 @@ class _PrivacyPageState extends State<PrivacyPage> {
       child: PageBody(
         width: 660,
         children: [
-          const TitleBlock('Política de privacidad de PuntoKampus'),
+          const TitleBlock(
+            'Política de privacidad de PuntoKampus',
+            subtitle: 'PuntoKampus es una plataforma estudiantil para la comunidad de la Universidad Técnica de Babahoyo.',
+          ),
           FutureBuilder<Json>(
             future: contact,
             builder: (context, snapshot) {
@@ -593,42 +597,70 @@ class _PrivacyPageState extends State<PrivacyPage> {
                 );
               }
               if (snapshot.hasError) {
-                return OutlinedButton(
-                  onPressed: () => setState(
-                    () => contact = widget.api.request('GET', 'privacidad'),
-                  ),
-                  child: const Text('Reintentar cargar el contacto'),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _Feedback(
+                      'No pudimos cargar los datos de contacto.',
+                      isError: true,
+                    ),
+                    OutlinedButton(
+                      onPressed: () => setState(
+                        () => contact = widget.api.request('GET', 'privacidad'),
+                      ),
+                      child: const Text('Reintentar cargar el contacto'),
+                    ),
+                  ],
                 );
               }
-              final data = snapshot.data;
-              if (data?['responsable'] == null || data?['contacto'] == null) {
-                return const _Feedback(
-                  'Borrador para revisión. El responsable y el contacto se definirán antes del piloto.',
-                );
-              }
-              return Text(
-                'Responsable de los datos: ${data!['responsable']}.\nContacto: ${data['contacto']}.',
+              final responsible =
+                  (snapshot.data?['responsable'] as String? ?? '').trim();
+              final email = (snapshot.data?['contacto'] as String? ?? '')
+                  .trim();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (responsible.isEmpty || email.isEmpty)
+                    const _Feedback(
+                      'Borrador para revisión. Faltan datos de contacto del piloto.',
+                    ),
+                  if (responsible.isNotEmpty)
+                    Text('Responsable de los datos: $responsible'),
+                  if (email.isNotEmpty)
+                    Link(
+                      uri: Uri(scheme: 'mailto', path: email),
+                      builder: (_, followLink) => TextButton.icon(
+                        onPressed: followLink,
+                        icon: const Icon(Icons.email_outlined),
+                        label: Text(email),
+                      ),
+                    ),
+                ],
               );
             },
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'PuntoKampus es una plataforma estudiantil para la comunidad de la Universidad Técnica de Babahoyo. Guardamos tu correo institucional y tus nombres para identificar tu cuenta y permitirte entrar.',
+          const _PrivacySection(
+            'Qué datos guardamos',
+            'Guardamos tu correo institucional y tus nombres. Si creas una tienda, también guardamos tu código de estudiante, carrera, semestre y número de WhatsApp. Registramos tus pedidos y los reportes que envías. Si solicitas Premium, guardamos la foto del comprobante, el número y el monto del pago.',
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Si creas una tienda, usamos tus datos académicos y tu número de WhatsApp para gestionar la tienda y coordinar pedidos. El público solo ve tu número si lo activas. El equipo usa tus datos para administrar el servicio.',
+          const _PrivacySection(
+            'Para qué los usamos',
+            'Usamos estos datos para verificar el acceso, publicar tu tienda, coordinar pedidos, revisar reportes y comprobar pagos de Premium. También podemos medir el funcionamiento del piloto con datos agrupados sin nombres.',
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Los pedidos guardan la información necesaria para que el comprador y el vendedor coordinen la entrega. Si solicitas Premium, el equipo revisa el comprobante de forma privada y conserva el número y el monto del pago.',
+          const _PrivacySection(
+            'Quién puede verlos',
+            'El vendedor ve tu nombre y tu pedido cuando compras. Si vendes, quien te hace un pedido recibe tu número de WhatsApp y el público solo puede verlo si activas esa opción. El equipo autorizado administra el servicio. La foto del comprobante está disponible para el vendedor que la envió y para administración.',
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Puedes consultar y corregir tus datos en Cuenta. Al borrar tu cuenta se eliminan el perfil, la tienda y sus archivos. Los pedidos de otras personas mantienen su historial sin tus datos de cuenta.',
+          const _PrivacySection(
+            'Tus derechos',
+            'Puedes consultar y corregir tus datos en Cuenta. Usa el contacto de esta política para pedir una copia o solicitar una corrección. Puedes solicitar el borrado desde Cuenta o desde esta página.',
           ),
-          const SizedBox(height: 16),
-          const Text(
+          const _PrivacySection(
+            'Cuánto tiempo los guardamos',
+            'Guardamos tus datos mientras mantengas la cuenta. Al borrarla se eliminan el perfil, la tienda y sus archivos. La otra parte conserva el historial sin el nombre de la cuenta o tienda eliminada. La foto de un comprobante se retira al vencer el plazo de conservación contado desde la revisión. El número y el monto del pago aprobado se conservan como registro.',
+          ),
+          const _PrivacySection(
+            'Cambios a esta política',
             'Si la política cambia, te avisaremos en la aplicación antes de que el cambio entre en vigor.',
           ),
           const SizedBox(height: 16),
@@ -641,6 +673,27 @@ class _PrivacyPageState extends State<PrivacyPage> {
           ),
         ],
       ),
+    ),
+  );
+}
+
+class _PrivacySection extends StatelessWidget {
+  const _PrivacySection(this.title, this.body);
+  final String title, body;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 24),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+        ),
+        const SizedBox(height: 6),
+        Text(body, style: const TextStyle(height: 1.5)),
+      ],
     ),
   );
 }

@@ -345,21 +345,28 @@ class StatusPanel extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 24),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 26,
-                height: 1.2,
-                letterSpacing: -0.6,
+            Semantics(
+              liveRegion: true,
+              child: Column(
+                children: [
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 26,
+                      height: 1.2,
+                      letterSpacing: -0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: muted),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: muted),
             ),
             if (action != null) ...[
               const SizedBox(height: 24),

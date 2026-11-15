@@ -8,6 +8,8 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **P
 
 Laravel consulta PostgreSQL. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
 
+Los datos definitivos y el recorrido con tres participantes están en [preparación de la prueba web](docs/preparacion-piloto.md).
+
 La app principal conecta la Vitrina, el acceso institucional, Cuenta, las tiendas, los productos, el inventario, los pedidos, los reportes y Premium con la API real. Filament permite revisar reportes y comprobantes, dar de baja y reactivar tiendas. Las guías incluyen [probar el acceso](docs/acceso-y-cuenta.md), [publicar una tienda](docs/mi-tienda.md), [gestionar productos](docs/mis-productos.md), [hacer y gestionar pedidos](docs/carrito-y-pedidos.md), [moderar tiendas](docs/reportes-y-moderacion.md) y [probar Premium](docs/premium.md). El SMTP y los datos definitivos de privacidad se configuran antes del piloto. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
 
 ## Carpetas

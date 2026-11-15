@@ -3,6 +3,11 @@ import 'package:material_ui/material_ui.dart';
 import '../api/catalog_api.dart';
 import 'kampus_design.dart';
 
+double _textScale(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(16) / 16;
+
+const _largeTextScale = 1.3;
+
 class EntryGrid extends StatelessWidget {
   const EntryGrid({
     super.key,
@@ -21,17 +26,17 @@ class EntryGrid extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final products = entries.firstOrNull?.isProduct == true;
-      final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+      final textScale = _textScale(context);
       final detailed = constraints.maxWidth >= 740;
       final columns = products
-          ? (textScale > 1.3
+          ? (textScale > _largeTextScale
                 ? (constraints.maxWidth / (260 * textScale)).floor().clamp(1, 4)
                 : constraints.maxWidth >= 960
                 ? 4
                 : constraints.maxWidth >= 680
                 ? 3
                 : 2)
-          : (detailed && textScale <= 1.3 ? 2 : 1);
+          : (detailed && textScale <= _largeTextScale ? 2 : 1);
       final gap = detailed ? 20.0 : 12.0;
       final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
       return Wrap(
@@ -127,7 +132,7 @@ class _ShopCard extends StatelessWidget {
                 children: [
                   Text(
                     entry.name,
-                    maxLines: 2,
+                    maxLines: _textScale(context) > _largeTextScale ? null : 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: detailed ? 22 : 18,
@@ -282,7 +287,7 @@ class _ProductCard extends StatelessWidget {
                 ),
                 child: Text(
                   entry.name,
-                  maxLines: 2,
+                  maxLines: _textScale(context) > _largeTextScale ? null : 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 18,
@@ -295,7 +300,7 @@ class _ProductCard extends StatelessWidget {
               const SizedBox(height: 4),
               Text(
                 (entry.json['tienda'] as Json)['nombre'] as String,
-                maxLines: 1,
+                maxLines: _textScale(context) > _largeTextScale ? null : 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 14, height: 1.4, color: muted),
               ),
@@ -359,7 +364,7 @@ class _MetaLine extends StatelessWidget {
       Expanded(
         child: Text(
           text,
-          maxLines: 2,
+          maxLines: _textScale(context) > _largeTextScale ? null : 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 14, height: 1.35),
         ),

@@ -527,7 +527,39 @@ class _RealCatalogState extends State<RealCatalog> {
     builder: (context, _) {
       final c = widget.controller;
       final noun = c.products ? 'productos' : 'tiendas';
+      final term = c.term.trim();
       final desktop = MediaQuery.sizeOf(context).width >= 1000;
+      final categoryButtons = [
+        for (final option in [null, ...c.categories])
+          Semantics(
+            selected: c.category == option?.id,
+            child: OutlinedButton(
+              onPressed: () =>
+                  c.filter(categoryId: option?.id, changeCategory: true),
+              style: OutlinedButton.styleFrom(
+                backgroundColor: c.category == option?.id
+                    ? orange
+                    : Colors.white,
+                foregroundColor: c.category == option?.id ? Colors.white : ink,
+                side: BorderSide(
+                  color: c.category == option?.id ? orange : line,
+                ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: desktop ? 16 : 20,
+                  vertical: 12,
+                ),
+                textStyle: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 15,
+                  fontWeight: c.category == option?.id
+                      ? FontWeight.w700
+                      : FontWeight.w400,
+                ),
+              ),
+              child: Text(option?.name ?? 'Todas'),
+            ),
+          ),
+      ];
       return RefreshIndicator(
         onRefresh: c.refresh,
         child: SingleChildScrollView(
@@ -611,8 +643,10 @@ class _RealCatalogState extends State<RealCatalog> {
                           controller: search,
                           onChanged: (text) => c.filter(text: text),
                           textInputAction: TextInputAction.search,
+                          maxLength: 100,
                           decoration: InputDecoration(
                             hintText: '¿Qué estás buscando?',
+                            counterText: '',
                             prefixIcon: const Icon(
                               Icons.search,
                               color: ink,
@@ -634,51 +668,13 @@ class _RealCatalogState extends State<RealCatalog> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        for (final option in [null, ...c.categories])
-                          Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: Semantics(
-                              selected: c.category == option?.id,
-                              child: OutlinedButton(
-                                onPressed: () => c.filter(
-                                  categoryId: option?.id,
-                                  changeCategory: true,
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: c.category == option?.id
-                                      ? orange
-                                      : Colors.white,
-                                  foregroundColor: c.category == option?.id
-                                      ? Colors.white
-                                      : ink,
-                                  side: BorderSide(
-                                    color: c.category == option?.id
-                                        ? orange
-                                        : line,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 12,
-                                  ),
-                                  textStyle: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 15,
-                                    fontWeight: c.category == option?.id
-                                        ? FontWeight.w700
-                                        : FontWeight.w400,
-                                  ),
-                                ),
-                                child: Text(option?.name ?? 'Todas'),
-                              ),
-                            ),
-                          ),
-                      ],
+                  if (desktop)
+                    Wrap(spacing: 8, runSpacing: 8, children: categoryButtons)
+                  else
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(spacing: 8, children: categoryButtons),
                     ),
-                  ),
                   const SizedBox(height: 16),
                   CatalogSwitch(
                     products: c.products,
@@ -686,7 +682,9 @@ class _RealCatalogState extends State<RealCatalog> {
                   ),
                   const SizedBox(height: 16),
                   if (c.loading)
-                    const _CatalogSkeleton()
+                    _CatalogSkeleton(
+                      label: c.filtered ? 'Buscando $noun…' : 'Cargando $noun…',
+                    )
                   else if (c.error != null)
                     StatusPanel(
                       icon: Icons.wifi_off_outlined,
@@ -697,36 +695,49 @@ class _RealCatalogState extends State<RealCatalog> {
                         child: const Text('Reintentar'),
                       ),
                     )
+                  else if (c.entries.isEmpty && c.filtered)
+                    StatusPanel(
+                      icon: Icons.search,
+                      title: term.isEmpty
+                          ? 'No encontramos resultados'
+                          : 'No encontramos nada con «$term».',
+                      message: term.isEmpty
+                          ? 'Todavía no hay $noun en esta categoría.'
+                          : 'Prueba con otra palabra o revisa las categorías.',
+                      action: FilledButton(
+                        onPressed: () {
+                          search.clear();
+                          c.filter(text: '', changeCategory: true);
+                        },
+                        child: Text(
+                          term.isEmpty
+                              ? 'Ver todas las categorías'
+                              : c.category == null
+                              ? 'Limpiar búsqueda'
+                              : 'Limpiar búsqueda y filtros',
+                        ),
+                      ),
+                    )
+                  else if (c.entries.isEmpty && c.products)
+                    StatusPanel(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'Aún no hay productos',
+                      message: 'Explora las tiendas mientras se publican más productos.',
+                      action: FilledButton(
+                        onPressed: () => c.filter(showProducts: false),
+                        child: const Text('Ver tiendas'),
+                      ),
+                    )
                   else if (c.entries.isEmpty)
                     StatusPanel(
-                      icon: c.filtered
-                          ? Icons.search
-                          : Icons.storefront_outlined,
-                      title: c.filtered
-                          ? (c.term.trim().isEmpty
-                                ? 'No encontramos resultados'
-                                : 'No encontramos nada con «${c.term.trim()}».')
-                          : 'La vitrina está por estrenarse',
-                      message: c.filtered
-                          ? 'Prueba con otra palabra o revisa las categorías.'
-                          : 'Todavía no hay $noun. Aquí descubrirás los emprendimientos de la comunidad UTB.',
-                      action: c.filtered
-                          ? FilledButton(
-                              onPressed: () {
-                                search.clear();
-                                c.term = '';
-                                c.filter(
-                                  categoryId: null,
-                                  changeCategory: true,
-                                );
-                              },
-                              child: const Text('Limpiar búsqueda'),
-                            )
-                          : OutlinedButton.icon(
-                              onPressed: c.refresh,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Actualizar'),
-                            ),
+                      icon: Icons.storefront_outlined,
+                      title: 'La vitrina está por estrenarse',
+                      message: 'Aquí aparecerán las tiendas de la comunidad UTB cuando se publiquen.',
+                      action: OutlinedButton.icon(
+                        onPressed: c.refresh,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Actualizar'),
+                      ),
                     )
                   else ...[
                     Row(
@@ -790,50 +801,58 @@ class _RealCatalogState extends State<RealCatalog> {
 }
 
 class _CatalogSkeleton extends StatelessWidget {
-  const _CatalogSkeleton();
+  const _CatalogSkeleton({required this.label});
+  final String label;
+
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: 'Cargando la vitrina',
-    liveRegion: true,
-    child: ExcludeSemantics(
-      child: Column(
-        children: [
-          for (var i = 0; i < 3; i++)
-            Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: line),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: softGray,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(height: 16, width: 160, color: softGray),
-                        const SizedBox(height: 12),
-                        Container(height: 12, width: 100, color: softGray),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Semantics(
+        liveRegion: true,
+        child: Text(label, style: const TextStyle(color: muted)),
       ),
-    ),
+      const SizedBox(height: 12),
+      ExcludeSemantics(
+        child: Column(
+          children: [
+            for (var i = 0; i < 3; i++)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: line),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: softGray,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(height: 16, width: 160, color: softGray),
+                          const SizedBox(height: 12),
+                          Container(height: 12, width: 100, color: softGray),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    ],
   );
 }
 
@@ -871,6 +890,9 @@ class _ShopScreenState extends State<ShopScreen> {
 
   Future<CatalogEntry> load() => widget.api.shop(widget.slug);
 
+  void openVitrina() =>
+      Navigator.pushNamedAndRemoveUntil(context, '/vitrina', (_) => false);
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
@@ -885,8 +907,8 @@ class _ShopScreenState extends State<ShopScreen> {
             children: [
               StatusPanel(
                 icon: Icons.hourglass_empty,
-                title: 'Cargando',
-                message: 'Un momento, por favor.',
+                title: 'Cargando la tienda…',
+                message: 'Estamos consultando la información de esta tienda.',
                 busy: true,
               ),
             ],
@@ -898,23 +920,33 @@ class _ShopScreenState extends State<ShopScreen> {
           return PageBody(
             children: [
               StatusPanel(
-                icon: Icons.storefront_outlined,
+                icon: unavailable
+                    ? Icons.storefront_outlined
+                    : Icons.wifi_off_outlined,
                 title: failure is ApiFailure
                     ? failure.message
                     : 'No pudimos cargar la tienda.',
                 message: unavailable
                     ? 'Explora otras tiendas en la Vitrina.'
                     : 'Puedes volver a la vitrina o intentarlo de nuevo.',
-                action: FilledButton(
-                  onPressed: unavailable
-                      ? () => Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/vitrina',
-                          (_) => false,
-                        )
-                      : () => setState(() => future = load()),
-                  child: Text(unavailable ? 'Ir a la vitrina' : 'Reintentar'),
-                ),
+                action: unavailable
+                    ? FilledButton(
+                        onPressed: openVitrina,
+                        child: const Text('Ir a la vitrina'),
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          FilledButton(
+                            onPressed: () => setState(() => future = load()),
+                            child: const Text('Reintentar'),
+                          ),
+                          TextButton(
+                            onPressed: openVitrina,
+                            child: const Text('Ir a la vitrina'),
+                          ),
+                        ],
+                      ),
               ),
             ],
           );
@@ -1063,10 +1095,14 @@ class _ShopScreenState extends State<ShopScreen> {
             ),
             const SizedBox(height: 16),
             if (products.isEmpty)
-              const StatusPanel(
+              StatusPanel(
                 icon: Icons.inventory_2_outlined,
                 title: 'Aún no hay productos',
                 message: 'Esta tienda todavía no ha publicado productos.',
+                action: OutlinedButton(
+                  onPressed: openVitrina,
+                  child: const Text('Explorar la Vitrina'),
+                ),
               )
             else
               EntryGrid(

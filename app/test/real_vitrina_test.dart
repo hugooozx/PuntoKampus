@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
@@ -40,6 +41,8 @@ void main() {
       await tester.tap(find.text('Productos'));
       await tester.pumpAndSettle();
       expect(requests, contains('/api/v1/productos'));
+      expect(find.text('Aún no hay productos'), findsOneWidget);
+      expect(find.text('Ver tiendas'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.enterText(find.byType(TextField), 'inexistente');
       await tester.pump(const Duration(milliseconds: 350));
@@ -48,23 +51,76 @@ void main() {
         find.text('No encontramos nada con «inexistente».'),
         findsOneWidget,
       );
+      await tester.ensureVisible(find.text('Limpiar búsqueda'));
+      await tester.tap(find.text('Limpiar búsqueda'));
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(find.text('Aún no hay productos'), findsOneWidget);
+      await tester.ensureVisible(find.text('Ver tiendas'));
+      await tester.tap(find.text('Ver tiendas'));
+      await tester.pumpAndSettle();
+      expect(find.text('La vitrina está por estrenarse'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('Reintenta una conexión fallida sin mostrar éxito ficticio', (
+  testWidgets('Muestra la carga y permite reintentar tras agotar la espera', (
     tester,
   ) async {
-    var fail = true;
+    final slow = Completer<http.Response>();
     final api = CatalogApi(
-      client: MockClient((r) async => fail ? http.Response('', 503) : empty(r)),
+      timeout: const Duration(seconds: 2),
+      client: MockClient(
+        (r) async => r.url.path.endsWith('/tiendas') && !slow.isCompleted
+            ? slow.future
+            : empty(r),
+      ),
+    );
+    await tester.pumpWidget(PuntoKampusRealApp(api: api));
+    await tester.pump();
+    expect(find.text('Cargando tiendas…'), findsOneWidget);
+    expect(find.text('La vitrina está por estrenarse'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.text('No pudimos cargar la vitrina'), findsOneWidget);
+    expect(
+      find.textContaining('La conexión está tardando demasiado'),
+      findsOneWidget,
+    );
+    slow.complete(http.Response('', 503));
+    await tester.ensureVisible(find.text('Reintentar'));
+    await tester.tap(find.text('Reintentar'));
+    await tester.pumpAndSettle();
+    expect(find.text('La vitrina está por estrenarse'), findsOneWidget);
+  });
+
+  testWidgets('Una tienda sin productos enlaza a la Vitrina', (tester) async {
+    final shop = {
+      'id': 3,
+      'nombre': 'Papelería del campus',
+      'slug': 'papeleria-del-campus',
+      'productos': [],
+    };
+    final api = CatalogApi(
+      client: MockClient(
+        (r) async => r.url.path.endsWith('/papeleria-del-campus')
+            ? http.Response(
+                jsonEncode({'data': shop}),
+                200,
+                headers: {'content-type': 'application/json; charset=utf-8'},
+              )
+            : empty(r),
+      ),
     );
     await tester.pumpWidget(PuntoKampusRealApp(api: api));
     await tester.pumpAndSettle();
-    expect(find.text('No pudimos cargar la vitrina'), findsOneWidget);
-    fail = false;
-    await tester.ensureVisible(find.text('Reintentar'));
-    await tester.tap(find.text('Reintentar'));
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .pushNamed('/t/papeleria-del-campus');
+    await tester.pumpAndSettle();
+    expect(find.text('Aún no hay productos'), findsOneWidget);
+    await tester.ensureVisible(find.text('Explorar la Vitrina'));
+    await tester.tap(find.text('Explorar la Vitrina'));
     await tester.pumpAndSettle();
     expect(find.text('La vitrina está por estrenarse'), findsOneWidget);
   });

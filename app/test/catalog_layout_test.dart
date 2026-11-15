@@ -78,11 +78,15 @@ void main() {
           expect(shops, [
             'Dulces de Ana',
             'Pausa Fría',
-            'Papel y Tinta',
+            'Papel y Tinta para todo el campus UTB',
             'Punto Snack',
           ]);
           expect(find.text('Biblioteca'), findsNWidgets(2));
           expect(find.text('Sacó 10'), findsOneWidget);
+          final longShop = tester.widget<Text>(
+            find.text('Papel y Tinta para todo el campus UTB'),
+          );
+          expect(longShop.maxLines, scale > 1 ? isNull : 2);
           await tester.ensureVisible(find.text('Comida').first);
           await tester.tap(find.text('Comida').first);
           await tester.pumpAndSettle();
@@ -93,6 +97,10 @@ void main() {
           expect(find.text('Disponible'), findsOneWidget);
           expect(find.text('Agotado'), findsOneWidget);
           expect(find.text('\$1.50'), findsOneWidget);
+          final longProduct = tester.widget<Text>(
+            find.text('Brownie de chocolate con nueces y trozos de cacao'),
+          );
+          expect(longProduct.maxLines, scale > 1 ? isNull : 2);
           expect(tester.takeException(), isNull);
           final cards = find.byType(Card);
           if (size.width <= 375 && scale == 1) {

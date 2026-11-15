@@ -4,11 +4,11 @@
   "tiendas": [
     {"id":1,"nombre":"Dulces de Ana","slug":"dulces-de-ana","descripcion":"Brownies, galletas y empanadas hechas en casa.","plan":"gratis","categoria_1_id":2,"punto_entrega_id":1,"horario":"Lun–vie, 08:00–14:00"},
     {"id":2,"nombre":"Pausa Fría","slug":"pausa-fria","descripcion":"Jugos y café frío para el receso.","plan":"gratis","categoria_1_id":3,"punto_entrega_id":2},
-    {"id":3,"nombre":"Papel y Tinta","slug":"papel-y-tinta","descripcion":"Cuadernos, separadores e impresiones.","plan":"premium","categoria_1_id":6,"punto_entrega_id":1},
+    {"id":3,"nombre":"Papel y Tinta para todo el campus UTB","slug":"papel-y-tinta","descripcion":"Cuadernos, separadores y material para estudiar. Hacemos impresiones, preparamos carpetas por materia y entregamos cerca de la biblioteca.","plan":"premium","categoria_1_id":6,"punto_entrega_id":1},
     {"id":4,"nombre":"Punto Snack","slug":"punto-snack","descripcion":"Sánduches y snacks en el campus.","plan":"gratis","categoria_1_id":1,"punto_entrega_id":3}
   ],
   "productos": [
-    {"id":1,"tienda_id":1,"nombre":"Brownie de chocolate","descripcion":"Brownie individual de chocolate, hecho en casa.","precio":"1.50","disponible":true,"fotos":[{"url":"http://127.0.0.1:8767/assets/assets/images/brownie.png"},{"url":"http://127.0.0.1:8767/assets/assets/images/cookie.png"}]},
+    {"id":1,"tienda_id":1,"nombre":"Brownie de chocolate con nueces y trozos de cacao","descripcion":"Brownie individual de chocolate, hecho en casa.","precio":"1.50","disponible":true,"fotos":[{"url":"http://127.0.0.1:8767/assets/assets/images/brownie.png"},{"url":"http://127.0.0.1:8767/assets/assets/images/cookie.png"}]},
     {"id":2,"tienda_id":1,"nombre":"Galleta de avena","descripcion":"Galleta artesanal de avena.","precio":"0.75","disponible":false,"fotos":[{"url":"http://127.0.0.1:8767/assets/assets/images/cookie.png"}]}
   ]
 }
