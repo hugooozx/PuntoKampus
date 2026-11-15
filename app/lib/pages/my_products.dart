@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -444,6 +444,17 @@ class _ProductFormState extends State<_ProductForm> {
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
+                    inputFormatters: [
+                      TextInputFormatter.withFunction(
+                        (previous, next) =>
+                            next.composing.isValid &&
+                                    !next.composing.isCollapsed ||
+                                RegExp(r'^\d{0,3}(?:[.,]\d{0,2})?$')
+                                    .hasMatch(next.text)
+                            ? next
+                            : previous,
+                      ),
+                    ],
                     decoration: const InputDecoration(
                       labelText: 'Precio (USD)',
                       prefixText: '\$',

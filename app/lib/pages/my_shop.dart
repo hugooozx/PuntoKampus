@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 
 import '../api/account_session.dart';
 import '../api/catalog_api.dart';
@@ -504,14 +503,13 @@ class _ShopFormState extends State<_ShopForm> {
     _text(
       'WhatsApp',
       phone,
-      40,
-      keyboard: TextInputType.phone,
+      10,
+      keyboard: TextInputType.number,
       hint: '0991234567',
-      validator: (value) =>
-          RegExp(r'^(?:0|\+?593)9[0-9]{8}$')
-              .hasMatch((value ?? '').replaceAll(RegExp(r'[\s().-]+'), ''))
+      formatters: [FilteringTextInputFormatter.digitsOnly],
+      validator: (value) => RegExp(r'^09[0-9]{8}$').hasMatch(value ?? '')
           ? null
-          : 'Escribe un número de celular de Ecuador.',
+          : 'Escribe 10 dígitos de un celular ecuatoriano que empiece por 09.',
     ),
     SwitchListTile(
       contentPadding: EdgeInsets.zero,
@@ -605,6 +603,7 @@ class _ShopFormState extends State<_ShopForm> {
     int lines = 1,
     String? hint,
     TextInputType? keyboard,
+    List<TextInputFormatter>? formatters,
     FormFieldValidator<String>? validator,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
@@ -614,6 +613,8 @@ class _ShopFormState extends State<_ShopForm> {
       maxLines: lines,
       maxLength: max,
       keyboardType: keyboard,
+      inputFormatters: formatters,
+      maxLengthEnforcement: MaxLengthEnforcement.enforced,
       decoration: InputDecoration(labelText: label, hintText: hint),
       validator:
           validator ??

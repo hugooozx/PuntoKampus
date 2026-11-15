@@ -15,6 +15,7 @@ class AccountApi {
     String path, {
     Json? data,
     String? token,
+    String? requestId,
     Uint8List? image,
     List<Uint8List> photos = const [],
   }) async {
@@ -61,6 +62,7 @@ class AccountApi {
       }
       request.headers['Accept'] = 'application/json';
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
+      if (requestId != null) request.headers['Idempotency-Key'] = requestId;
       final response = await catalog.client
           .send(request)
           .then(http.Response.fromStream)
@@ -84,9 +86,15 @@ class AccountApi {
         return json;
       }
       final fields = json?['errors'];
-      final fieldError = fields is Map && fields.isNotEmpty
-          ? (fields.values.first as List).first as String
-          : null;
+      final errors = <String, String>{
+        if (fields is Map)
+          for (final entry in fields.entries)
+            if (entry.key is String &&
+                entry.value is List &&
+                (entry.value as List).firstOrNull is String)
+              entry.key as String: (entry.value as List).first as String,
+      };
+      final fieldError = errors.values.firstOrNull;
       final message = response.statusCode >= 500
           ? 'El servicio no está disponible en este momento. Inténtalo de nuevo.'
           : fieldError ??
@@ -96,6 +104,7 @@ class AccountApi {
         message,
         response.statusCode,
         int.tryParse(response.headers['retry-after'] ?? ''),
+        errors,
       );
     } on TimeoutException {
       throw const ApiFailure(
@@ -110,6 +119,12 @@ class AccountApi {
 }
 
 class AccountFailure extends ApiFailure {
-  const AccountFailure(super.message, super.status, this.retryAfter);
+  const AccountFailure(
+    super.message,
+    super.status,
+    this.retryAfter, [
+    this.fields = const {},
+  ]);
   final int? retryAfter;
+  final Map<String, String> fields;
 }

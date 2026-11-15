@@ -22,6 +22,7 @@ class EsquemaPostgresqlTest extends TestCase
         $this->assertFalse(DB::getSchemaBuilder()->hasTable('usuarios'));
         $migration->up();
         $migration->up();
+        (require database_path('migrations/2026_11_14_020000_agregar_idempotencia_pedidos.php'))->up();
         $tables = DB::select("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
         $this->assertCount(21, $tables); // 19 de dominio, migraciones y reintentos de archivos.
         $this->assertDatabaseCount('usuarios', 0);

@@ -29,6 +29,10 @@ class MiTiendaTest extends TestCase
         $this->getJson('/api/v1/mi-tienda')->assertOk()->assertJsonPath('tienda', null);
         $this->postJson('/api/v1/mi-tienda', array_replace($datos, ['categoria_2_id' => $datos['categoria_1_id']]))
             ->assertUnprocessable()->assertJsonValidationErrors('categoria_2_id');
+        foreach (['09912abc67', '09912345678'] as $telefono) {
+            $this->postJson('/api/v1/mi-tienda', array_replace($datos, ['whatsapp' => $telefono]))
+                ->assertUnprocessable()->assertJsonValidationErrors('whatsapp');
+        }
         $this->assertDatabaseCount('perfiles_vendedores', 0);
 
         $creada = $this->postJson('/api/v1/mi-tienda', $datos)->assertCreated()

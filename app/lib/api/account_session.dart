@@ -104,6 +104,7 @@ class AccountSession extends ChangeNotifier {
     String method,
     String path, {
     Json? data,
+    String? requestId,
     Uint8List? image,
     List<Uint8List> photos = const [],
   }) async {
@@ -112,6 +113,7 @@ class AccountSession extends ChangeNotifier {
         method,
         path,
         token: _token,
+        requestId: requestId,
         data: data,
         image: image,
         photos: photos,

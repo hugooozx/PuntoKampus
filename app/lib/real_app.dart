@@ -9,6 +9,7 @@ import 'ui/kampus_design.dart';
 import 'ui/catalog_cards.dart';
 import 'pages/institutional_account.dart';
 import 'pages/my_shop.dart';
+import 'pages/purchase.dart';
 
 class PuntoKampusRealApp extends StatefulWidget {
   const PuntoKampusRealApp({super.key, required this.api, this.storage});
@@ -19,6 +20,7 @@ class PuntoKampusRealApp extends StatefulWidget {
 }
 
 class _RealAppState extends State<PuntoKampusRealApp> {
+  final cart = PurchaseCart();
   late final session = AccountSession(
     AccountApi(widget.api),
     storage: widget.storage,
@@ -31,6 +33,7 @@ class _RealAppState extends State<PuntoKampusRealApp> {
 
   @override
   void dispose() {
+    cart.dispose();
     session.dispose();
     widget.api.close();
     super.dispose();
@@ -44,6 +47,8 @@ class _RealAppState extends State<PuntoKampusRealApp> {
     supportedLocales: const [Locale('es')],
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: kampusTheme(),
+    builder: (context, child) =>
+        PurchaseScope(session: session, cart: cart, child: child!),
     onGenerateRoute: (settings) {
       final path = (Uri.tryParse(settings.name ?? '/')?.path ?? '/')
           .replaceFirst(RegExp(r'/$'), '');
@@ -142,21 +147,7 @@ class _RealShellState extends State<RealShell> {
       index: selected,
       children: [
         RealCatalog(controller: controller),
-        PageBody(
-          children: [
-            const TitleBlock('Mis pedidos'),
-            StatusPanel(
-              icon: Icons.shopping_bag_outlined,
-              title: 'Próximamente',
-              message:
-                  'Los pedidos estarán disponibles en una próxima entrega.',
-              action: OutlinedButton(
-                onPressed: () => setState(() => tab = 0),
-                child: const Text('Explorar la vitrina'),
-              ),
-            ),
-          ],
-        ),
+        BuyerOrders(key: ValueKey(session.user?['id']), visible: selected == 1),
         if (signedIn)
           MyShopPage(
             key: ValueKey(session.user!['id']),
@@ -419,10 +410,17 @@ class _RealCatalogState extends State<RealCatalog> {
                         ),
                       ),
                     ),
-                  Text(
-                    'Vitrina',
-                    style: Theme.of(context).textTheme.headlineMedium
-                        ?.copyWith(fontSize: desktop ? 44 : 32),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Vitrina',
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(fontSize: desktop ? 44 : 32),
+                        ),
+                      ),
+                      const CartButton(),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -778,6 +776,7 @@ class _ShopScreenState extends State<ShopScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       title: Text(widget.productId == null ? 'Tienda' : 'Producto'),
+      actions: const [CartButton()],
     ),
     body: FutureBuilder(
       future: future,
@@ -874,15 +873,7 @@ class _ShopScreenState extends State<ShopScreen> {
                       const SizedBox(height: 8),
                       Text(product.description),
                       const SizedBox(height: 24),
-                      const FilledButton(
-                        onPressed: null,
-                        child: Text('Agregar al carrito'),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Los pedidos todavía no están habilitados.',
-                        style: TextStyle(color: muted, fontSize: 14),
-                      ),
+                      ProductPurchase(shop: shop, product: product),
                       TextButton(
                         onPressed: () =>
                             Navigator.pushNamed(context, '/t/${shop.slug}'),
