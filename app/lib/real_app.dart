@@ -1,20 +1,36 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'api/account_api.dart';
+import 'api/account_session.dart';
 import 'api/catalog_api.dart';
 import 'api/catalog_controller.dart';
 import 'ui/kampus_design.dart';
 import 'ui/catalog_cards.dart';
+import 'pages/institutional_account.dart';
 
 class PuntoKampusRealApp extends StatefulWidget {
-  const PuntoKampusRealApp({super.key, required this.api});
+  const PuntoKampusRealApp({super.key, required this.api, this.storage});
   final CatalogApi api;
+  final FlutterSecureStorage? storage;
   @override
   State<PuntoKampusRealApp> createState() => _RealAppState();
 }
 
 class _RealAppState extends State<PuntoKampusRealApp> {
+  late final session = AccountSession(
+    AccountApi(widget.api),
+    storage: widget.storage,
+  );
+  @override
+  void initState() {
+    super.initState();
+    session.restore();
+  }
+
   @override
   void dispose() {
+    session.dispose();
     widget.api.close();
     super.dispose();
   }
@@ -28,13 +44,22 @@ class _RealAppState extends State<PuntoKampusRealApp> {
     localizationsDelegates: GlobalMaterialLocalizations.delegates,
     theme: kampusTheme(),
     onGenerateRoute: (settings) {
-      final path = Uri.tryParse(settings.name ?? '/')?.path ?? '/';
+      final path = (Uri.tryParse(settings.name ?? '/')?.path ?? '/')
+          .replaceFirst(RegExp(r'/$'), '');
       final match = RegExp(r'^/t/([a-z0-9-]+)$').firstMatch(path);
       return MaterialPageRoute(
         settings: settings,
-        builder: (_) => match == null
-            ? RealShell(api: widget.api)
-            : ShopScreen(api: widget.api, slug: match.group(1)!),
+        builder: (_) => switch (path) {
+          '/privacidad' => PrivacyPage(api: session.api),
+          '/borrar-cuenta' => DeleteAccountPage(
+            session: session,
+            publicPage: true,
+          ),
+          _ =>
+            match == null
+                ? RealShell(api: widget.api, session: session)
+                : ShopScreen(api: widget.api, slug: match.group(1)!),
+        },
       );
     },
   );
@@ -62,8 +87,9 @@ void openEntry(BuildContext context, CatalogApi api, CatalogEntry entry) {
 }
 
 class RealShell extends StatefulWidget {
-  const RealShell({super.key, required this.api});
+  const RealShell({super.key, required this.api, required this.session});
   final CatalogApi api;
+  final AccountSession session;
   @override
   State<RealShell> createState() => _RealShellState();
 }
@@ -84,20 +110,47 @@ class _RealShellState extends State<RealShell> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.session,
+    builder: (context, _) => buildShell(context),
+  );
+
+  Widget buildShell(BuildContext context) {
+    final session = widget.session;
+    final signedIn = session.signedIn;
+    final selected = signedIn ? tab : 0;
+    void enter() {
+      if (session.restoring) return;
+      setState(() => tab = 0);
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => InstitutionalLogin(session: session),
+        ),
+      );
+    }
+
+    if (session.needsProfile) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Acceso UTB')),
+        body: SafeArea(child: ProfileForm(session: session)),
+      );
+    }
     final desktop = MediaQuery.sizeOf(context).width >= 1000;
     final body = IndexedStack(
-      index: tab,
+      index: selected,
       children: [
         RealCatalog(controller: controller),
-        for (final destination in destinations.skip(1))
+        for (final destination in destinations.skip(1).take(2))
           PageBody(
             children: [
               TitleBlock(destination.label),
               StatusPanel(
                 icon: destination.icon,
                 title: 'Próximamente',
-                message: 'Esta sección estará disponible cuando se habilite el acceso con tu correo institucional.',
+                message: destination.label == 'Mis pedidos'
+                    ? 'Los pedidos estarán disponibles en una próxima entrega.'
+                    : 'La creación de tiendas estará disponible en una próxima entrega.',
                 action: OutlinedButton(
                   onPressed: () => setState(() => tab = 0),
                   child: const Text('Explorar la vitrina'),
@@ -105,6 +158,8 @@ class _RealShellState extends State<RealShell> {
               ),
             ],
           ),
+        if (signedIn)
+          ProfileForm(key: ValueKey(session.user!['id']), session: session),
       ],
     );
     return Scaffold(
@@ -131,7 +186,11 @@ class _RealShellState extends State<RealShell> {
                             child: Brand(),
                           ),
                           const SizedBox(height: 36),
-                          for (var i = 0; i < destinations.length; i++)
+                          for (
+                            var i = 0;
+                            i < (signedIn ? destinations.length : 1);
+                            i++
+                          )
                             Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: Semantics(
@@ -171,6 +230,11 @@ class _RealShellState extends State<RealShell> {
                                 ),
                               ),
                             ),
+                          if (!signedIn)
+                            FilledButton(
+                              onPressed: session.restoring ? null : enter,
+                              child: const Text('Entrar'),
+                            ),
                         ],
                       ),
                     ),
@@ -189,9 +253,33 @@ class _RealShellState extends State<RealShell> {
               child: Column(
                 children: [
                   if (!desktop)
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-                      child: Brand(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                      child: Row(
+                        children: [
+                          const Expanded(child: Brand()),
+                          if (!signedIn)
+                            TextButton(
+                              onPressed: session.restoring ? null : enter,
+                              child: const Text('Entrar'),
+                            ),
+                        ],
+                      ),
+                    ),
+                  if (session.restoreError case final String error)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 8,
+                        children: [
+                          Text(error),
+                          TextButton(
+                            onPressed: session.restore,
+                            child: const Text('Reintentar sesión'),
+                          ),
+                        ],
+                      ),
                     ),
                   Expanded(child: body),
                 ],
@@ -200,7 +288,7 @@ class _RealShellState extends State<RealShell> {
           ],
         ),
       ),
-      bottomNavigationBar: desktop
+      bottomNavigationBar: desktop || !signedIn
           ? null
           : DecoratedBox(
               decoration: const BoxDecoration(
@@ -677,9 +765,7 @@ class _ShopScreenState extends State<ShopScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(
-        widget.productId == null ? 'Tienda' : 'Producto',
-      ),
+      title: Text(widget.productId == null ? 'Tienda' : 'Producto'),
     ),
     body: FutureBuilder(
       future: future,

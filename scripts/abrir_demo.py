@@ -13,7 +13,8 @@ WEB = Path(__file__).resolve().parents[1] / "app" / "build" / "web"
 
 class DemoHandler(SimpleHTTPRequestHandler):
     def send_head(self):
-        if urlsplit(self.path).path.startswith("/t/"):
+        path = urlsplit(self.path).path.rstrip("/")
+        if path.startswith("/t/") or path in ("/privacidad", "/borrar-cuenta"):
             self.path = "/index.html"
         return super().send_head()
 

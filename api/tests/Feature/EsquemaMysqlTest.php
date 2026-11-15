@@ -21,7 +21,7 @@ class EsquemaMysqlTest extends TestCase
         $migration->up();
         $migration->up();
         $tables = DB::select("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE='BASE TABLE'");
-        $this->assertCount(20, $tables); // 19 de dominio y migraciones.
+        $this->assertCount(21, $tables); // 19 de dominio, migraciones y reintentos de archivos.
         $this->assertDatabaseCount('usuarios', 0);
         $this->assertDatabaseCount('tiendas', 0);
     }

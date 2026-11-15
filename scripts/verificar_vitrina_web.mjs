@@ -130,7 +130,7 @@ try {
       if (!apiResponses.some(r => r.url.includes('buscar=sushi'))) throw new Error('La búsqueda no llegó al cliente HTTP');
       await shot('mobile-sin-resultados');
       await clickText('Limpiar búsqueda');
-      await send('Page.navigate',{url:url+'#/t/dulces-de-ana'});
+      await send('Page.navigate',{url:url+'t/dulces-de-ana'});
       await delay(1800);
       await shot('mobile-tienda');
       await send('Runtime.evaluate', {expression:"document.querySelector('flt-semantics-placeholder')?.click()"});

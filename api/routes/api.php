@@ -1,9 +1,28 @@
 <?php
 
+use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\VitrinaController;
+use App\Http\Middleware\SesionInstitucional;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
+    Route::get('privacidad', fn () => [
+        'responsable' => config('puntokampus.responsable'),
+        'contacto' => config('puntokampus.contacto'),
+    ]);
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::post('auth/codigo', [CuentaController::class, 'pedirCodigo']);
+        Route::post('auth/verificar', [CuentaController::class, 'verificar']);
+        Route::post('cuentas/codigo-borrado', [CuentaController::class, 'pedirBorradoWeb']);
+        Route::delete('cuentas', [CuentaController::class, 'borrarWeb']);
+    });
+    Route::middleware(SesionInstitucional::class.':alta')->group(function () {
+        Route::post('auth/salir', [CuentaController::class, 'salir']);
+        Route::get('yo', [CuentaController::class, 'ver']);
+        Route::put('yo', [CuentaController::class, 'actualizar']);
+        Route::post('yo/codigo-borrado', [CuentaController::class, 'pedirBorrado']);
+        Route::delete('yo', [CuentaController::class, 'borrar']);
+    });
     Route::get('categorias', [VitrinaController::class, 'categorias']);
     Route::get('puntos-entrega', [VitrinaController::class, 'puntosEntrega']);
     Route::get('tiendas', [VitrinaController::class, 'tiendas']);

@@ -6,9 +6,9 @@ El proyecto utiliza **Flutter para Android y web**, **Laravel para la API**, **M
 
 ## Estado de este incremento
 
-La API de Vitrina ya consulta la base real MySQL 8.4 aprobada, mediante migraciones verificadas. La entrada principal de Flutter ya consume esta API y representa los estados vacíos de la base real. La interfaz de demostración no debe confundirse con una plataforma publicada: el acceso por correo institucional, los pedidos reales, los comprobantes y la moderación necesitan sus servicios definitivos antes del piloto.
+Laravel consulta la base MySQL 8.4 aprobada mediante migraciones verificadas. Flutter representa el catálogo y sus estados de carga, error y vacío con las respuestas de esa API.
 
-La app principal consulta las rutas públicas de Vitrina. La referencia antigua de recorridos se conserva separada en `app/lib/main_demo.dart`. El contrato compartido es [Datos, reglas y API](docs/prd/04-datos-reglas-y-api.md). El acceso institucional, los pedidos, las escrituras y Filament quedan para los siguientes incrementos. Vitrina y los detalles públicos se ajustaron a las [láminas recuperadas](docs/diseno/README.md); la revisión visual del usuario sigue pendiente.
+La app principal consulta las rutas públicas de Vitrina y conecta el acceso institucional y Cuenta con Laravel y MySQL. Consulta [cómo probar acceso y cuenta](docs/acceso-y-cuenta.md). El envío mediante SMTP y los datos definitivos de privacidad se configuran antes del piloto. Los pedidos, la publicación de tiendas y productos, y Filament quedan para siguientes incrementos. La referencia de recorridos se conserva en `app/lib/main_demo.dart`.
 
 ## Carpetas
 
@@ -56,7 +56,7 @@ flutter test
 
 En la instalación portátil de esta computadora, usa `../.tools/flutter/bin/flutter.bat` en lugar de `flutter` cuando estés dentro de `app/`.
 
-Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base permanece vacía; no aparecen tiendas ficticias. Cuenta, Mi tienda y Mis pedidos indican que el acceso institucional todavía no está habilitado. La demo antigua solo se ejecuta expresamente con `flutter run -t lib/main_demo.dart`.
+Para probar la versión real, abre Vitrina y alterna Tiendas/Productos. La base parte vacía. Pulsa «Entrar» para solicitar un código y completar tu perfil. Mi tienda y Mis pedidos indican que sus funciones siguen pendientes. La demo antigua se ejecuta con `flutter run -t lib/main_demo.dart`.
 
 ## Ejecutar la API
 
