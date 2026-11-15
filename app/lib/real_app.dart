@@ -10,6 +10,7 @@ import 'ui/catalog_cards.dart';
 import 'pages/institutional_account.dart';
 import 'pages/my_shop.dart';
 import 'pages/purchase.dart';
+import 'pages/report_shop.dart';
 
 class PuntoKampusRealApp extends StatefulWidget {
   const PuntoKampusRealApp({super.key, required this.api, this.storage});
@@ -1033,18 +1034,9 @@ class _ShopScreenState extends State<ShopScreen> {
               ),
             const SizedBox(height: 28),
             const Divider(),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: OutlinedButton.icon(
-                onPressed: null,
-                icon: const Icon(Icons.flag_outlined),
-                label: const Text('Reportar tienda'),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Los reportes todavía no están habilitados.',
-              style: TextStyle(color: muted, fontSize: 14),
+            ReportShopButton(
+              shop: shop,
+              session: PurchaseScope.of(context).session,
             ),
           ],
         );

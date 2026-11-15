@@ -308,6 +308,38 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
   );
 }
 
+Future<bool> ensureInstitutionalProfile(
+  BuildContext context,
+  AccountSession session,
+) async {
+  if (!session.signedIn) {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => InstitutionalLogin(session: session),
+      ),
+    );
+  }
+  if (!context.mounted || !session.signedIn) return false;
+  if (session.needsProfile) {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Acceso UTB')),
+          body: SafeArea(
+            child: ProfileForm(
+              session: session,
+              onCompleted: () => Navigator.pop(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  return context.mounted && session.signedIn && !session.needsProfile;
+}
+
 class ProfileForm extends StatefulWidget {
   const ProfileForm({super.key, required this.session, this.onCompleted});
   final AccountSession session;

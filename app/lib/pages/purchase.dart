@@ -248,32 +248,9 @@ class _CartPageState extends State<_CartPage> {
     });
     try {
       final session = scope.session;
-      if (!session.signedIn) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute<void>(
-            builder: (_) => InstitutionalLogin(session: session),
-          ),
-        );
+      if (!await ensureInstitutionalProfile(context, session) || !mounted) {
+        return;
       }
-      if (!mounted || !session.signedIn) return;
-      if (session.needsProfile) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute<void>(
-            builder: (context) => Scaffold(
-              appBar: AppBar(title: const Text('Acceso UTB')),
-              body: SafeArea(
-                child: ProfileForm(
-                  session: session,
-                  onCompleted: () => Navigator.pop(context),
-                ),
-              ),
-            ),
-          ),
-        );
-      }
-      if (!mounted || !session.signedIn || session.needsProfile) return;
       if ((session.user?['tienda'] as Json?)?['id'] == scope.cart.shop?.id) {
         setState(
           () => error = 'No puedes pedir en tu propia tienda. Quita estos productos para continuar.',

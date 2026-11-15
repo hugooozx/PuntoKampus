@@ -67,10 +67,13 @@ class AccesoInstitucional
         });
 
         try {
-            $accion = $proposito === 'acceso' ? 'entrar en PuntoKampus' : 'confirmar el borrado de tu cuenta';
-            Mail::raw("Tu código para {$accion} es {$codigo}.\n\nVence en 10 minutos. Si tú no lo pediste, ignora este correo.", function ($mensaje) use ($correo, $proposito) {
-                $mensaje->to($correo)->subject($proposito === 'acceso'
-                    ? 'Tu código de acceso a PuntoKampus' : 'Confirma el borrado de tu cuenta PuntoKampus');
+            [$accion, $asunto] = match ($proposito) {
+                'administracion' => ['entrar al panel de PuntoKampus', 'Tu código para el panel de PuntoKampus'],
+                'eliminar_cuenta' => ['confirmar el borrado de tu cuenta', 'Confirma el borrado de tu cuenta PuntoKampus'],
+                default => ['entrar en PuntoKampus', 'Tu código de acceso a PuntoKampus'],
+            };
+            Mail::raw("Tu código para {$accion} es {$codigo}.\n\nVence en 10 minutos. Si tú no lo pediste, ignora este correo.", function ($mensaje) use ($correo, $asunto) {
+                $mensaje->to($correo)->subject($asunto);
             });
         } catch (Throwable) {
             DB::table('codigos_acceso')->where('id', $id)->update(['invalidado_en' => now()]);

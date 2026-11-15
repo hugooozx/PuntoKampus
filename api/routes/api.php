@@ -4,6 +4,7 @@ use App\Http\Controllers\CuentaController;
 use App\Http\Controllers\MisProductosController;
 use App\Http\Controllers\MiTiendaController;
 use App\Http\Controllers\PedidoController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\VitrinaController;
 use App\Http\Middleware\SesionInstitucional;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,7 @@ Route::prefix('v1')->group(function () {
     Route::get('facultades', [MiTiendaController::class, 'facultades']);
     Route::get('carreras', [MiTiendaController::class, 'carreras']);
     Route::middleware(SesionInstitucional::class)->group(function () {
+        Route::post('tiendas/{id}/reportes', [ReporteController::class, 'crear'])->whereNumber('id');
         Route::post('pedidos', [PedidoController::class, 'crear']);
         Route::get('pedidos', [PedidoController::class, 'indice']);
         Route::post('pedidos/{id}/cancelar', [PedidoController::class, 'cancelarCompra'])->whereNumber('id');
