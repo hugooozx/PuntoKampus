@@ -9,6 +9,8 @@ En esta computadora, ejecuta `Abrir PuntoKampus.cmd` y abre `http://127.0.0.1:87
 
 Las cantidades van de 1 a 20 por producto. La entrega se puede programar desde 30 minutos hasta 7 días después del envío y usa la hora de Ecuador continental. La nota admite 200 caracteres. La interfaz de **Mi tienda** admite hasta 10 dígitos en el WhatsApp nacional y valida el prefijo `09`. Laravel normaliza los formatos ecuatorianos admitidos a un número internacional.
 
+Cuando un producto tiene inventario, tanto su ficha como el carrito limitan la cantidad según las unidades consultadas al abrir el producto. Laravel vuelve a comprobar las existencias cuando recibe el pedido.
+
 ## Contrato de la API
 
 - `POST /api/v1/pedidos` conserva los campos del PRD y devuelve `pedido` y `whatsapp_url`. Envía los identificadores y las cantidades como enteros JSON. `hora_entrega` incluye un desplazamiento horario ISO 8601 en la solicitud. La respuesta devuelve la hora en UTC. Laravel comprueba la tienda, los productos, el punto activo y el plazo, copia nombres y precios y guarda el pedido pendiente antes de responder.

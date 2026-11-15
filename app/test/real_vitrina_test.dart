@@ -69,94 +69,126 @@ void main() {
     expect(find.text('La vitrina está por estrenarse'), findsOneWidget);
   });
 
-  testWidgets(
-    'Abre un producto real de la API y muestra agotado sin permitir pedidos',
-    (tester) async {
-      final shop = <String, dynamic>{
-        'id': 1,
-        'nombre': 'Tienda de prueba',
-        'slug': 'tienda-prueba',
-        'descripcion': 'Descripción de prueba',
-        'plan': 'premium',
-        'categoria_1_id': 1,
-        'categoria_2_id': null,
-        'punto_entrega_id': 1,
-        'horario': 'Lunes a viernes',
-      };
-      final product = <String, dynamic>{
-        'id': 5,
-        'tienda_id': 1,
-        'nombre': 'Producto de prueba',
-        'descripcion': 'Producto agotado',
-        'precio': '2.00',
-        'disponible': false,
-        'fotos': [],
-      };
-      final api = CatalogApi(
-        client: MockClient((request) async {
-          final path = request.url.path;
-          final Object body;
-          if (path.endsWith('categorias')) {
-            body = {
-              'data': [
-                {'id': 1, 'nombre': 'Comida'},
-              ],
-            };
-          } else if (path.endsWith('puntos-entrega')) {
-            body = {
-              'data': [
-                {'id': 1, 'nombre': 'Biblioteca'},
-              ],
-            };
-          } else if (path.endsWith('/tienda-prueba')) {
-            body = {
-              'data': {
-                ...shop,
-                'productos': [product],
-              },
-            };
-          } else {
-            body = {
-              'data': [
-                if (path.endsWith('productos'))
-                  {...product, 'tienda': shop}
-                else
-                  shop,
-              ],
-              'meta': {'current_page': 1, 'last_page': 1, 'total': 1},
-            };
-          }
-          return http.Response(
-            jsonEncode(body),
-            200,
-            headers: {'content-type': 'application/json; charset=utf-8'},
+  for (final available in [false, true]) {
+    testWidgets(
+      available ? 'El carrito respeta las unidades libres del producto' : 'Abre un producto real de la API y muestra agotado sin permitir pedidos',
+      (tester) async {
+        final shop = <String, dynamic>{
+          'id': 1,
+          'nombre': 'Tienda de prueba',
+          'slug': 'tienda-prueba',
+          'descripcion': 'Descripción de prueba',
+          'plan': 'premium',
+          'categoria_1_id': 1,
+          'categoria_2_id': null,
+          'punto_entrega_id': 1,
+          'punto_entrega_nombre': 'Biblioteca',
+          'categorias_nombres': ['Comida'],
+          'horario': 'Lunes a viernes',
+        };
+        final product = <String, dynamic>{
+          'id': 5,
+          'tienda_id': 1,
+          'nombre': 'Producto de prueba',
+          'descripcion': 'Producto agotado',
+          'precio': '2.00',
+          'disponible': available,
+          'unidades_disponibles': available ? 1 : 0,
+          'fotos': [],
+        };
+        final requests = <String>[];
+        final api = CatalogApi(
+          client: MockClient((request) async {
+            final path = request.url.path;
+            requests.add(path);
+            final Object body;
+            if (path.endsWith('categorias')) {
+              body = {
+                'data': [
+                  {'id': 1, 'nombre': 'Comida'},
+                ],
+              };
+            } else if (path.endsWith('puntos-entrega')) {
+              body = {
+                'data': [
+                  {'id': 1, 'nombre': 'Biblioteca'},
+                ],
+              };
+            } else if (path.endsWith('/tienda-prueba')) {
+              body = {
+                'data': {
+                  ...shop,
+                  'productos': [product],
+                },
+              };
+            } else {
+              body = {
+                'data': [
+                  if (path.endsWith('productos'))
+                    {...product, 'tienda': shop}
+                  else
+                    shop,
+                ],
+                'meta': {'current_page': 1, 'last_page': 1, 'total': 1},
+              };
+            }
+            return http.Response(
+              jsonEncode(body),
+              200,
+              headers: {'content-type': 'application/json; charset=utf-8'},
+            );
+          }),
+        );
+        await tester.pumpWidget(PuntoKampusRealApp(api: api));
+        await tester.pumpAndSettle();
+        expect(find.text('Sacó 10'), findsOneWidget);
+        await tester.tap(find.text('Productos'));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Producto de prueba'));
+        await tester.tap(find.text('Producto de prueba'));
+        await tester.pumpAndSettle();
+        if (available) {
+          await tester.ensureVisible(find.text('Agregar al carrito'));
+          await tester.tap(find.text('Agregar al carrito'));
+          await tester.pumpAndSettle();
+          expect(find.text('Quitar'), findsOneWidget);
+          expect(
+            tester
+                .widget<IconButton>(
+                  find.byWidgetPredicate(
+                    (widget) =>
+                        widget is IconButton &&
+                        widget.tooltip == 'Aumentar cantidad',
+                  ),
+                )
+                .onPressed,
+            isNull,
           );
-        }),
-      );
-      await tester.pumpWidget(PuntoKampusRealApp(api: api));
-      await tester.pumpAndSettle();
-      expect(find.text('Sacó 10'), findsOneWidget);
-      await tester.tap(find.text('Productos'));
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(find.text('Producto de prueba'));
-      await tester.tap(find.text('Producto de prueba'));
-      await tester.pumpAndSettle();
-      expect(find.text('Agotado'), findsOneWidget);
-      expect(find.text('\$2.00'), findsOneWidget);
-      expect(
-        tester
-            .widget<FilledButton>(
-              find.widgetWithText(FilledButton, 'Agregar al carrito'),
-            )
-            .onPressed,
-        isNull,
-      );
-      await tester.ensureVisible(find.text('Ver tienda'));
-      await tester.tap(find.text('Ver tienda'));
-      await tester.pumpAndSettle();
-      expect(find.text('Entrega: Biblioteca'), findsOneWidget);
-      expect(find.textContaining('WhatsApp:'), findsNothing);
-      expect(tester.takeException(), isNull);
-    },
-  );
+          expect(tester.takeException(), isNull);
+          return;
+        }
+        expect(find.text('Agotado'), findsOneWidget);
+        expect(find.text('\$2.00'), findsOneWidget);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.widgetWithText(FilledButton, 'Agregar al carrito'),
+              )
+              .onPressed,
+          isNull,
+        );
+        await tester.ensureVisible(find.text('Ver tienda'));
+        await tester.tap(find.text('Ver tienda'));
+        await tester.pumpAndSettle();
+        expect(find.text('Entrega: Biblioteca'), findsOneWidget);
+        expect(find.text('Comida'), findsWidgets);
+        expect(
+          requests.where((path) => path.endsWith('/puntos-entrega')),
+          hasLength(1),
+        );
+        expect(find.textContaining('WhatsApp:'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 }

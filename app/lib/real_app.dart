@@ -748,34 +748,9 @@ class _ProductGalleryState extends State<_ProductGallery> {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
-  late Future<
-    ({
-      CatalogEntry shop,
-      List<CatalogOption> points,
-      List<CatalogOption> categories,
-    })
-  >
-  future = load();
+  late Future<CatalogEntry> future = load();
 
-  Future<
-    ({
-      CatalogEntry shop,
-      List<CatalogOption> points,
-      List<CatalogOption> categories,
-    })
-  >
-  load() async {
-    final results = await Future.wait<Object>([
-      widget.api.shop(widget.slug),
-      widget.api.options('puntos-entrega'),
-      widget.api.options('categorias'),
-    ]);
-    return (
-      shop: results[0] as CatalogEntry,
-      points: results[1] as List<CatalogOption>,
-      categories: results[2] as List<CatalogOption>,
-    );
-  }
+  Future<CatalogEntry> load() => widget.api.shop(widget.slug);
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -815,7 +790,7 @@ class _ShopScreenState extends State<ShopScreen> {
             ],
           );
         }
-        final shop = snapshot.data!.shop;
+        final shop = snapshot.data!;
         final products = (shop.json['productos'] as List? ?? [])
             .map(
               (p) => CatalogEntry({
@@ -908,15 +883,8 @@ class _ShopScreenState extends State<ShopScreen> {
             ],
           );
         }
-        final categoryNames = snapshot.data!.categories
-            .where(
-              (category) => [
-                shop.json['categoria_1_id'],
-                shop.json['categoria_2_id'],
-              ].contains(category.id),
-            )
-            .map((category) => category.name)
-            .join(' · ');
+        final categoryNames =
+            (shop.json['categorias_nombres'] as List? ?? const []).join(' · ');
         return PageBody(
           children: [
             Container(
@@ -990,7 +958,7 @@ class _ShopScreenState extends State<ShopScreen> {
                         _ShopFact(
                           icon: Icons.location_on_outlined,
                           text:
-                              'Entrega: ${snapshot.data!.points.where((point) => point.id == shop.json['punto_entrega_id']).firstOrNull?.name ?? 'Punto habitual no disponible'}',
+                              'Entrega: ${shop.json['punto_entrega_nombre'] ?? 'Punto habitual no disponible'}',
                         ),
                         if (shop.json['horario']
                             case final String schedule) ...[

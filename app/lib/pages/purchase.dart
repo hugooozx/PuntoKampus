@@ -19,6 +19,8 @@ const _payments = {
 
 String _money(int cents) => '\$${(cents / 100).toStringAsFixed(2)}';
 int _cents(String price) => (double.parse(price) * 100).round();
+int _quantityLimit(CatalogEntry product) =>
+    min(20, product.json['unidades_disponibles'] as int? ?? 20);
 String _two(int n) => n.toString().padLeft(2, '0');
 String _day(DateTime date) =>
     '${_two(date.day)}/${_two(date.month)}/${date.year}';
@@ -49,7 +51,7 @@ class PurchaseCart extends ChangeNotifier {
   }
 
   void setQuantity(CatalogEntry product, int quantity) {
-    if (quantity < 0 || quantity > 20) return;
+    if (quantity < 0 || quantity > _quantityLimit(product)) return;
     if (quantity == 0) {
       _entries.remove(product.id);
       if (_entries.isEmpty) shop = null;
@@ -110,8 +112,7 @@ class ProductPurchase extends StatefulWidget {
 
 class _ProductPurchaseState extends State<ProductPurchase> {
   int quantity = 1;
-  int get maximum =>
-      min(20, widget.product.json['unidades_disponibles'] as int? ?? 20);
+  int get maximum => _quantityLimit(widget.product);
 
   Future<void> _add(PurchaseCart cart) async {
     if (cart.shop != null && cart.shop!.id != widget.shop.id) {
@@ -201,7 +202,7 @@ class _Quantity extends StatelessWidget {
   const _Quantity({
     required this.value,
     required this.onChanged,
-    this.maximum = 20,
+    required this.maximum,
   });
   final int value, maximum;
   final ValueChanged<int> onChanged;
@@ -302,6 +303,7 @@ class _CartPageState extends State<_CartPage> {
                           children: [
                             _Quantity(
                               value: entry.quantity,
+                              maximum: _quantityLimit(entry.product),
                               onChanged: (value) =>
                                   cart.setQuantity(entry.product, value),
                             ),

@@ -10,6 +10,7 @@ La entrada `app/lib/main.dart` consume exclusivamente las rutas públicas de Lar
 - Carga, vacío inicial, búsqueda sin resultados y error con reintento separados.
 - Botón para cargar la siguiente página; un fallo conserva los resultados anteriores y permite reintentar esa misma página.
 - Detalle público `/t/{slug}`, con logo, descripción, categorías, horario, punto de entrega, portada Premium y WhatsApp solo si la API lo devuelve.
+- `GET /api/v1/tiendas/{slug}` incluye `categorias_nombres` y `punto_entrega_nombre` junto a los identificadores. Flutter usa esos nombres para abrir la ficha en una sola consulta. El punto puede ser nulo si dejó de estar activo.
 - Productos disponibles y agotados, precios como texto decimal y fotos del servidor. El detalle vuelve a consultar la tienda para no abrir un producto eliminado a partir de una tarjeta antigua.
 - La insignia «Sacó 10» no altera el orden recibido.
 

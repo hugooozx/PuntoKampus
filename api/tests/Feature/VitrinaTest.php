@@ -122,6 +122,8 @@ class VitrinaTest extends TestCase
         $producto->fotos()->create(['url' => 'https://ejemplo.test/primera.jpg', 'orden' => 1]);
         $this->getJson('/api/v1/tiendas/mi-tienda')->assertOk()
             ->assertJsonPath('data.categoria_1_id', 2)->assertJsonPath('data.categoria_2_id', 1)
+            ->assertJsonPath('data.categorias_nombres', ['Bebidas', 'Comida'])
+            ->assertJsonPath('data.punto_entrega_nombre', 'Biblioteca')
             ->assertJsonPath('data.productos.0.precio', '1.50')->assertJsonPath('data.productos.0.fotos.0.orden', 1)
             ->assertJsonMissingPath('data.whatsapp')->assertJsonMissingPath('data.usuario')->assertJsonMissingPath('data.perfil_vendedor');
         PerfilVendedor::where('usuario_id', $tienda->usuario_id)->update(['mostrar_whatsapp' => true]);
