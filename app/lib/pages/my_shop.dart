@@ -1,6 +1,8 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/account_session.dart';
 import '../api/catalog_api.dart';
@@ -54,12 +56,69 @@ class _MyShopPageState extends State<MyShopPage> {
   @override
   void didUpdateWidget(MyShopPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.visible) shop ??= _read();
+    if (widget.visible && !oldWidget.visible) shop = _read();
   }
 
   Future<Json> _read() => widget.session.authorized('GET', 'mi-tienda');
 
   void _refresh() => setState(() => shop = _read());
+
+  Future<void> _share(String slug) async {
+    final link = Uri.base.resolve('/t/${Uri.encodeComponent(slug)}').toString();
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Compartir enlace'),
+        content: SelectableText(link),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cerrar'),
+          ),
+          FilledButton.icon(
+            onPressed: () async {
+              try {
+                await Clipboard.setData(ClipboardData(text: link));
+                if (!dialogContext.mounted || !mounted) return;
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text('Enlace copiado')));
+              } on PlatformException {
+                if (dialogContext.mounted && mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Selecciona el enlace para copiarlo manualmente.',
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+            icon: const Icon(Icons.copy_outlined),
+            label: const Text('Copiar enlace'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _emailTeam(String email) async {
+    try {
+      if (await launchUrl(Uri(scheme: 'mailto', path: email))) return;
+    } on PlatformException {
+      // The address remains selectable if the browser has no mail handler.
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Copia el correo para escribir desde tu aplicación de correo.',
+        ),
+      ),
+    );
+  }
 
   Future<void> _edit(Json data) async {
     final result = await Navigator.push<Json>(
@@ -205,6 +264,22 @@ class _MyShopPageState extends State<MyShopPage> {
                 store['motivo_baja'] as String? ??
                     'Tu tienda está fuera de la Vitrina.',
               ),
+              const SizedBox(height: 12),
+              if (data['correo_soporte'] case final String email
+                  when email.isNotEmpty) ...[
+                SelectableText(email),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _emailTeam(email),
+                    icon: const Icon(Icons.email_outlined),
+                    label: const Text('Escribir al equipo'),
+                  ),
+                ),
+              ] else
+                const Text(
+                  'El equipo aún no ha configurado un correo de soporte.',
+                ),
             ],
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -243,6 +318,14 @@ class _MyShopPageState extends State<MyShopPage> {
                     Navigator.pushNamed(context, '/t/${store['slug']}'),
                 child: const Text('Ver tienda en la Vitrina'),
               ),
+            if (active && kIsWeb) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => _share(store['slug'] as String),
+                icon: const Icon(Icons.share_outlined),
+                label: const Text('Compartir enlace'),
+              ),
+            ],
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: uploading ? null : () => _edit(data),

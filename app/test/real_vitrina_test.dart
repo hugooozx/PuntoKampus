@@ -69,6 +69,28 @@ void main() {
     expect(find.text('La vitrina está por estrenarse'), findsOneWidget);
   });
 
+  testWidgets('La tienda no disponible permite volver a la Vitrina', (
+    tester,
+  ) async {
+    final api = CatalogApi(
+      client: MockClient(
+        (request) async => request.url.path.endsWith('/no-disponible')
+            ? http.Response('', 404)
+            : empty(request),
+      ),
+    );
+    await tester.pumpWidget(PuntoKampusRealApp(api: api));
+    await tester.pumpAndSettle();
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .pushNamed('/t/no-disponible');
+    await tester.pumpAndSettle();
+    expect(find.text('Esta tienda no está disponible.'), findsOneWidget);
+    await tester.tap(find.text('Ir a la vitrina'));
+    await tester.pumpAndSettle();
+    expect(find.text('La vitrina está por estrenarse'), findsOneWidget);
+  });
+
   for (final available in [false, true]) {
     testWidgets(
       available ? 'El carrito respeta las unidades libres del producto' : 'Abre un producto real de la API y muestra agotado sin permitir pedidos',

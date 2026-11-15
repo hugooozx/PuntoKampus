@@ -16,6 +16,7 @@ class MiTiendaTest extends TestCase
 
     public function test_registro_publicacion_edicion_y_visibilidad_en_vitrina(): void
     {
+        config(['puntokampus.soporte' => 'soporte@example.test']);
         $datos = $this->catalogos();
         $correo = 'prueba-tienda@fafi.utb.edu.ec';
         $this->postJson('/api/v1/auth/codigo', compact('correo'))->assertNoContent();
@@ -36,7 +37,8 @@ class MiTiendaTest extends TestCase
         $this->assertDatabaseCount('perfiles_vendedores', 0);
 
         $creada = $this->postJson('/api/v1/mi-tienda', $datos)->assertCreated()
-            ->assertJsonPath('tienda.plan', 'gratis')->assertJsonPath('mostrar_whatsapp', false);
+            ->assertJsonPath('tienda.plan', 'gratis')->assertJsonPath('mostrar_whatsapp', false)
+            ->assertJsonPath('correo_soporte', null);
         $slug = $creada->json('tienda.slug');
         $this->assertDatabaseHas('perfiles_vendedores', ['whatsapp' => '593991234567', 'mostrar_whatsapp' => false]);
         $this->getJson('/api/v1/tiendas?buscar=galletas')->assertOk()->assertJsonPath('data.0.slug', $slug);
@@ -67,6 +69,7 @@ class MiTiendaTest extends TestCase
         ]);
         $this->putJson('/api/v1/mi-tienda', $editada)->assertOk()
             ->assertJsonPath('tienda.estado', 'dada_de_baja')->assertJsonPath('tienda.motivo_baja', 'Revisión de prueba');
+        $this->getJson('/api/v1/mi-tienda')->assertOk()->assertJsonPath('correo_soporte', 'soporte@example.test');
         $this->getJson('/api/v1/tiendas/'.$slug)->assertNotFound();
     }
 

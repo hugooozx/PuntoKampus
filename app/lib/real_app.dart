@@ -774,17 +774,27 @@ class _ShopScreenState extends State<ShopScreen> {
           );
         }
         if (snapshot.hasError) {
+          final failure = snapshot.error;
+          final unavailable = failure is ApiFailure && failure.status == 404;
           return PageBody(
             children: [
               StatusPanel(
                 icon: Icons.storefront_outlined,
-                title: snapshot.error is ApiFailure
-                    ? (snapshot.error as ApiFailure).message
+                title: failure is ApiFailure
+                    ? failure.message
                     : 'No pudimos cargar la tienda.',
-                message: 'Puedes volver a la vitrina o intentarlo de nuevo.',
+                message: unavailable
+                    ? 'Explora otras tiendas en la Vitrina.'
+                    : 'Puedes volver a la vitrina o intentarlo de nuevo.',
                 action: FilledButton(
-                  onPressed: () => setState(() => future = load()),
-                  child: const Text('Reintentar'),
+                  onPressed: unavailable
+                      ? () => Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/',
+                          (_) => false,
+                        )
+                      : () => setState(() => future = load()),
+                  child: Text(unavailable ? 'Ir a la vitrina' : 'Reintentar'),
                 ),
               ),
             ],

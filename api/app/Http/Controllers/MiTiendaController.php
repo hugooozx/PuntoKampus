@@ -247,6 +247,7 @@ class MiTiendaController extends Controller
             'tienda' => $tienda ? (new TiendaResource($tienda))->resolve($request) + ['motivo_baja' => $tienda->motivo_baja] : null,
             'ya_es_vendedor' => $perfil !== null,
             'mostrar_whatsapp' => $perfil?->mostrar_whatsapp,
+            'correo_soporte' => $tienda?->estado === 'dada_de_baja' ? config('puntokampus.soporte') : null,
         ];
     }
 }
