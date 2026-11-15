@@ -6,6 +6,7 @@ use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
@@ -34,7 +35,7 @@ class AccesoInstitucional
         }
     }
 
-    public function enviar(string $correo, string $proposito): void
+    public function enviar(string $correo, string $proposito, bool $entregar = true): void
     {
         $ahora = now();
         $recientes = DB::table('codigos_acceso')->where('correo', $correo)
@@ -53,7 +54,7 @@ class AccesoInstitucional
         }
 
         $codigo = sprintf('%06d', random_int(0, 999999));
-        $id = DB::transaction(function () use ($correo, $proposito, $codigo, $ahora) {
+        $id = DB::transaction(function () use ($correo, $proposito, $codigo, $ahora, $entregar) {
             DB::table('codigos_acceso')->where(compact('correo', 'proposito'))
                 ->whereNull('usado_en')->whereNull('invalidado_en')->update(['invalidado_en' => $ahora]);
 
@@ -63,13 +64,20 @@ class AccesoInstitucional
                 'codigo_hash' => Hash::make($this->huellaCodigo($codigo)),
                 'creado_en' => $ahora,
                 'expira_en' => $ahora->copy()->addMinutes(10),
+                // Aplica el mismo límite a todas las solicitudes sin habilitar códigos para cuentas inexistentes.
+                'invalidado_en' => $entregar ? null : $ahora,
             ]);
         });
+
+        if (! $entregar) {
+            return;
+        }
 
         try {
             [$accion, $asunto] = match ($proposito) {
                 'administracion' => ['entrar al panel de PuntoKampus', 'Tu código para el panel de PuntoKampus'],
                 'eliminar_cuenta' => ['confirmar el borrado de tu cuenta', 'Confirma el borrado de tu cuenta PuntoKampus'],
+                'recuperar_contrasena' => ['restablecer tu contraseña', 'Restablece tu contraseña de PuntoKampus'],
                 default => ['verificar tu correo UTB', 'Confirma tu correo UTB para PuntoKampus'],
             };
             Mail::send(
@@ -79,6 +87,11 @@ class AccesoInstitucional
             );
         } catch (Throwable) {
             DB::table('codigos_acceso')->where('id', $id)->update(['invalidado_en' => now()]);
+            if ($proposito === 'recuperar_contrasena') {
+                Log::warning('No se pudo enviar un correo de recuperación de PuntoKampus.');
+
+                return;
+            }
             abort(503, 'No pudimos enviar el correo. Vuelve a intentarlo en un minuto.');
         }
     }

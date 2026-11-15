@@ -8,7 +8,8 @@ La portada web está en `/`. **Explorar la Vitrina** abre `/vitrina` sin sesión
 2. Abre **Crear cuenta** y pide el código con un correo ficticio disponible. Con `MAIL_MAILER=log`, busca en `api/storage/logs/laravel.log` la entrada más reciente para ese correo y copia sus seis dígitos.
 3. Escribe o pega el código y establece una contraseña de PuntoKampus de 12 a 128 caracteres. Si falta tu perfil, completa los nombres y el consentimiento. Las cuentas anteriores de solo código pueden usar **Crear cuenta** con el mismo correo para establecer la contraseña una vez y conservar el perfil.
 4. Usa **Cerrar sesión** desde Cuenta o el menú de perfil de escritorio. Luego elige **Iniciar sesión** y usa el correo y la contraseña. Para eliminar la cuenta se conserva la confirmación independiente por código.
-5. También puedes abrir directamente `http://127.0.0.1:8766/privacidad` y `http://127.0.0.1:8766/borrar-cuenta`. La segunda ruta permite borrar mediante correo y código incluso con una cuenta desactivada.
+5. Desde **Iniciar sesión**, elige **Olvidé mi contraseña** y solicita un código para una cuenta activa que ya tenga contraseña. Busca el mensaje «Restablece tu contraseña de PuntoKampus» en el registro de Laravel. Introduce sus seis dígitos, guarda la nueva contraseña e inicia sesión de nuevo. El cambio cierra las sesiones de la aplicación en los dispositivos donde esa cuenta estaba abierta.
+6. También puedes abrir directamente `http://127.0.0.1:8766/privacidad` y `http://127.0.0.1:8766/borrar-cuenta`. La segunda ruta permite borrar mediante correo y código incluso con una cuenta desactivada.
 
 El iniciador aplica las migraciones, incluida la que agrega `usuarios.contrasena_hash`. Para desarrollo sin periodo académico configurado las sesiones vencen en siete días. Con un periodo activo vencen al terminar su último día en Ecuador continental. El siguiente inicio de sesión usa contraseña, incluso al cambiar de periodo. Los tiempos persistidos se guardan en UTC.
 
@@ -21,6 +22,8 @@ La decisión posterior del equipo reemplaza el ingreso habitual por código desc
 | `POST /api/v1/auth/entrar` | Nueva. Recibe `correo`, `contrasena` y `dispositivo`. Responde con `token`, `usuario` y `es_nuevo: false`. |
 | `POST /api/v1/auth/codigo` | Solicita verificación para cuentas nuevas o anteriores sin contraseña. Responde 204 también si la cuenta ya tiene contraseña o está desactivada. |
 | `POST /api/v1/auth/verificar` | Recibe además `contrasena` y `contrasena_confirmation` para completar el registro o configurar la clave inicial. Conserva la estructura de respuesta. |
+| `POST /api/v1/auth/codigo-recuperacion` | Recibe `correo`. Devuelve 204 para solicitudes válidas dentro del límite y entrega un código de recuperación si la cuenta está activa y tiene contraseña. |
+| `POST /api/v1/auth/recuperar` | Recibe `correo`, `codigo`, `contrasena` y `contrasena_confirmation`. Devuelve 204 al cambiar la contraseña, consumir el código y revocar las sesiones de la aplicación. Flutter vuelve al inicio de sesión. |
 
 Aplicar la migración antes de actualizar Laravel y desplegar Flutter con la API actualizada. Las sesiones anteriores continúan hasta su vencimiento o cierre. La versión anterior de Flutter requiere actualizarse para completar este nuevo registro.
 
@@ -32,7 +35,7 @@ El servidor autentica el encabezado Bearer con un middleware que lee `sesiones_a
 | `POST /cuentas/codigo-borrado` | `correo` | 204. Código exclusivo de borrado para el formulario web público. |
 | `DELETE /cuentas` | `correo`, `codigo` | 204. Confirma el borrado desde el formulario sin sesión. |
 
-El correo del código tiene versiones HTML y de texto sin recursos externos. Se usa para verificar el registro, entrar a Filament y confirmar el borrado. Los códigos vencen en diez minutos y se almacenan como hashes. Se bloquea el quinto intento errado, hay un máximo de cinco envíos por hora y la API usa `Retry-After` en el límite de envíos. El borrado retira la cuenta, revoca las sesiones, cancela pedidos pendientes afectados y conserva los pedidos de la contraparte sin la relación a la cuenta o tienda borrada y sin notas libres. Los comprobantes aprobados conservan número y monto para evitar reutilización. Se retiran las fotos de los discos administrados. Los futuros servicios de subida deberán registrar URLs bajo `/storage/` en disco público y rutas relativas de comprobantes en disco privado. Activa el programador de Laravel para reintentar fallos de almacenamiento mediante `cuentas:limpiar-archivos`.
+El correo del código tiene versiones HTML y de texto sin recursos externos. Cada código es exclusivo de su operación: registro, recuperación de contraseña, acceso a Filament o borrado. Los códigos vencen en diez minutos y se almacenan como hashes. Se bloquea el quinto intento errado, hay un máximo de cinco solicitudes por hora por correo y la API usa `Retry-After` en el límite. El borrado retira la cuenta, revoca las sesiones, cancela pedidos pendientes afectados y conserva los pedidos de la contraparte sin la relación a la cuenta o tienda borrada y sin notas libres. Los comprobantes aprobados conservan número y monto para evitar reutilización. Se retiran las fotos de los discos administrados. Los futuros servicios de subida deberán registrar URLs bajo `/storage/` en disco público y rutas relativas de comprobantes en disco privado. Activa el programador de Laravel para reintentar fallos de almacenamiento mediante `cuentas:limpiar-archivos`.
 
 ## Antes del piloto
 

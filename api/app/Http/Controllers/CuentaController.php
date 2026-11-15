@@ -50,14 +50,8 @@ class CuentaController extends Controller
     {
         $correo = $this->correo($request);
         $codigo = $this->codigo($request);
-        $datos = $request->validate([
+        $datos = $this->validarContrasenaNueva($request, [
             'dispositivo' => ['required', 'string', 'max:120'],
-            'contrasena' => ['required', 'string', 'min:12', 'max:128', 'confirmed'],
-        ], [
-            'contrasena.required' => 'Elige una contraseña para PuntoKampus.',
-            'contrasena.min' => 'Usa al menos 12 caracteres.',
-            'contrasena.max' => 'Usa hasta 128 caracteres.',
-            'contrasena.confirmed' => 'Las contraseñas no coinciden.',
         ]);
         $resultado = $this->acceso->porCorreo($correo, function () use ($correo, $codigo, $datos) {
             $previo = Usuario::where('correo', $correo)->first();
@@ -77,6 +71,51 @@ class CuentaController extends Controller
         });
 
         return response()->json($resultado)->header('Cache-Control', 'no-store');
+    }
+
+    public function pedirRecuperacion(Request $request)
+    {
+        $correo = $this->correo($request);
+        $this->acceso->porCorreo($correo, function () use ($correo) {
+            $entregar = Usuario::where('correo', $correo)->where('estado', 'activa')->whereNotNull('contrasena_hash')->exists();
+            $this->acceso->enviar($correo, 'recuperar_contrasena', $entregar);
+        });
+
+        return response()->noContent();
+    }
+
+    public function recuperar(Request $request)
+    {
+        $correo = $this->correo($request);
+        $codigo = $this->codigo($request);
+        $datos = $this->validarContrasenaNueva($request);
+        $this->acceso->porCorreo($correo, function () use ($correo, $codigo, $datos) {
+            $ahora = now();
+            $id = $this->acceso->verificar($correo, 'recuperar_contrasena', $codigo);
+
+            DB::transaction(function () use ($correo, $datos, $id, $ahora) {
+                $usuario = Usuario::where('correo', $correo)->lockForUpdate()->first();
+                abort_unless($usuario?->estado === 'activa' && $usuario->contrasena_hash !== null,
+                    422, 'Este código ya no está vigente. Pide uno nuevo.');
+                $usuario->forceFill(['contrasena_hash' => Hash::driver('argon2id')->make($datos['contrasena'])])->save();
+                DB::table('codigos_acceso')->where('id', $id)->update(['usado_en' => $ahora]);
+                DB::table('sesiones_acceso')->where('usuario_id', $usuario->id)->delete();
+            });
+        });
+
+        return response()->noContent();
+    }
+
+    private function validarContrasenaNueva(Request $request, array $reglas = []): array
+    {
+        return $request->validate($reglas + [
+            'contrasena' => ['required', 'string', 'min:12', 'max:128', 'confirmed'],
+        ], [
+            'contrasena.required' => 'Elige una contraseña para PuntoKampus.',
+            'contrasena.min' => 'Usa al menos 12 caracteres.',
+            'contrasena.max' => 'Usa hasta 128 caracteres.',
+            'contrasena.confirmed' => 'Las contraseñas no coinciden.',
+        ]);
     }
 
     public function entrar(Request $request)

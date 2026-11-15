@@ -72,6 +72,8 @@ class _CodeFlow extends StatefulWidget {
   State<_CodeFlow> createState() => _CodeFlowState();
 }
 
+enum _AccessMode { login, registration, recovery }
+
 class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
   final form = GlobalKey<FormState>();
   final email = TextEditingController();
@@ -80,8 +82,11 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
   final confirmation = TextEditingController();
   DateTime? resendAt;
   Timer? ticker;
-  bool sent = false, deleted = false, registering = false;
-  bool get login => !widget.deleting && !registering;
+  bool sent = false, deleted = false, passwordReset = false;
+  _AccessMode mode = _AccessMode.login;
+  bool get login => !widget.deleting && mode == _AccessMode.login;
+  bool get recovering => mode == _AccessMode.recovery;
+  bool get newPassword => !widget.deleting && !login && sent;
   bool get hasSession => widget.deleting && !widget.publicPage;
   String get address => hasSession
       ? (widget.session.user?['correo'] as String? ?? '')
@@ -101,9 +106,10 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
     super.dispose();
   }
 
-  void _showRegistration(bool value) {
+  void _showMode(_AccessMode value, {bool reset = false}) {
     setState(() {
-      registering = value;
+      mode = value;
+      passwordReset = reset;
       ticker?.cancel();
       resendAt = null;
       sent = false;
@@ -133,7 +139,11 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
         } else {
           await widget.session.api.request(
             'POST',
-            widget.deleting ? 'cuentas/codigo-borrado' : 'auth/codigo',
+            widget.deleting
+                ? 'cuentas/codigo-borrado'
+                : recovering
+                ? 'auth/codigo-recuperacion'
+                : 'auth/codigo',
             data: {'correo': address},
           );
         }
@@ -157,6 +167,17 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
       if (!widget.deleting) {
         if (login) {
           await widget.session.signIn(address, password.text);
+        } else if (recovering) {
+          await widget.session.api.request(
+            'POST',
+            'auth/recuperar',
+            data: {
+              'correo': address,
+              'codigo': code.text,
+              'contrasena': password.text,
+              'contrasena_confirmation': confirmation.text,
+            },
+          );
         } else {
           await widget.session.register(
             address,
@@ -180,6 +201,9 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
     if (!ok || !mounted) return;
     if (widget.deleting) {
       setState(() => deleted = true);
+    } else if (recovering) {
+      TextInput.finishAutofillContext();
+      _showMode(_AccessMode.login, reset: true);
     } else {
       TextInput.finishAutofillContext();
       Navigator.pop(context);
@@ -221,12 +245,18 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
       else
         _AccessHeading(
           icon: sent ? Icons.mail_outline : Icons.school_outlined,
-          title: sent
+          title: recovering
+              ? (sent ? 'Elige una nueva contraseña' : 'Recuperar contraseña')
+              : sent
               ? 'Verifica tu correo UTB'
               : login
               ? 'Iniciar sesión'
               : 'Crear cuenta',
-          description: sent
+          description: recovering
+              ? (sent
+                    ? 'Si tu cuenta puede recuperarse, recibirás un código de 6 dígitos en'
+                    : 'Escribe el correo UTB con el que creaste tu cuenta.')
+              : sent
               ? 'Busca el código de 6 dígitos en'
               : widget.seller
               ? 'Usa tu correo UTB para crear o gestionar tu tienda.'
@@ -234,6 +264,10 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
               ? 'Ingresa con tu correo institucional y tu contraseña de PuntoKampus.'
               : 'Verifica tu correo institucional para crear tu cuenta.',
           address: sent ? address : null,
+        ),
+      if (passwordReset)
+        const _Feedback(
+          'Contraseña actualizada. Inicia sesión con tu nueva contraseña.',
         ),
       AutofillGroup(
         onDisposeAction: AutofillContextAction.cancel,
@@ -278,20 +312,22 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
                     }
                   },
                 ),
-              if (login || (registering && sent)) ...[
+              if (login || newPassword) ...[
                 const SizedBox(height: 16),
                 _PasswordField(
-                  key: ValueKey(registering),
-                  label: 'Contraseña de PuntoKampus',
+                  key: ValueKey(mode),
+                  label: recovering
+                      ? 'Nueva contraseña'
+                      : 'Contraseña de PuntoKampus',
                   controller: password,
                   enabled: !busy,
-                  newPassword: registering,
+                  newPassword: newPassword,
                   validator: (value) {
                     final length = value?.runes.length ?? 0;
                     if (value == null || value.trim().isEmpty) {
                       return 'Escribe tu contraseña.';
                     }
-                    if (registering && length < 12) {
+                    if (newPassword && length < 12) {
                       return 'Usa al menos 12 caracteres.';
                     }
                     return length > 128 ? 'Usa hasta 128 caracteres.' : null;
@@ -299,7 +335,7 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
                   onSubmitted: login ? (_) => confirm() : null,
                 ),
               ],
-              if (registering && sent) ...[
+              if (newPassword) ...[
                 const SizedBox(height: 12),
                 _PasswordField(
                   label: 'Confirmar contraseña',
@@ -330,13 +366,17 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
                       ? login
                             ? 'Iniciando sesión…'
                             : sent
-                            ? 'Verificando código…'
+                            ? (recovering
+                                  ? 'Guardando contraseña…'
+                                  : 'Verificando código…')
                             : 'Solicitando código…'
                       : login
                       ? 'Iniciar sesión'
                       : sent
                       ? (widget.deleting
                             ? 'Borrar mi cuenta para siempre'
+                            : recovering
+                            ? 'Guardar nueva contraseña'
                             : 'Crear cuenta')
                       : seconds > 0
                       ? 'Espera $seconds s'
@@ -355,9 +395,7 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
                 ),
                 if (!hasSession)
                   TextButton(
-                    onPressed: busy
-                        ? null
-                        : () => _showRegistration(registering),
+                    onPressed: busy ? null : () => _showMode(mode),
                     child: const Text('Cambiar correo'),
                   ),
               ],
@@ -365,12 +403,27 @@ class _CodeFlowState extends State<_CodeFlow> with _AccountAction<_CodeFlow> {
           ),
         ),
       ),
+      if (login)
+        TextButton(
+          onPressed: busy ? null : () => _showMode(_AccessMode.recovery),
+          child: const Text('Olvidé mi contraseña'),
+        ),
       if (!widget.deleting)
         TextButton(
-          onPressed: busy ? null : () => _showRegistration(!registering),
-          child: Text(login ? 'Crear cuenta' : 'Ya tengo cuenta'),
+          onPressed: busy
+              ? null
+              : () => _showMode(
+                  login ? _AccessMode.registration : _AccessMode.login,
+                ),
+          child: Text(
+            login
+                ? 'Crear cuenta'
+                : recovering
+                ? 'Volver a iniciar sesión'
+                : 'Ya tengo cuenta',
+          ),
         ),
-      if (registering && !sent)
+      if (mode == _AccessMode.registration && !sent)
         const Text(
           'Si ya usabas PuntoKampus con código, usa el mismo correo para crear tu contraseña.',
           textAlign: TextAlign.center,
